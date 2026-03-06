@@ -6,23 +6,25 @@ All notable changes to this project are documented in this file.
 
 ## [0.8.2] - 2026-03-06
 
-Generated from `v0.8.1..dev` (non-merge commits) and release validation on `dev`.
+Generated from `v0.8.1..main` (non-merge commits) and release validation on `main`.
 
 ### Added
 - Gemini CLI worker support for OMX team mode, including mixed CLI maps and `--model` passthrough (`#576`, `#579`, related issue `#573`).
 - Default frontier-model fallback is now centralized through `DEFAULT_FRONTIER_MODEL` (currently `gpt-5.4`) instead of hardcoded references (`#583`).
+- `configure-notifications` is now the canonical shipped notification-setup skill, with catalog/setup behavior aligned to match docs (`#584`).
 
 ### Changed
 - Bumped package version to `0.8.2`.
-- Setup/install now follows the catalog manifest more strictly and `--force` cleans stale shipped skill directories (`#575`, `#580`, closes `#574`).
+- Setup/install now follows the catalog manifest more strictly and `--force` cleans stale shipped / legacy notification skill directories (`#575`, `#580`, `#584`, closes `#574`).
 - Expanded OpenClaw integration docs and localized navigation links (`#571`).
 
 ### Fixed
+- `omx setup` now skips writing the deprecated `[tui]` section for Codex CLI `>= 0.107.0` (`#572`, fixes `#564`).
 - Prevented unresolved placeholder leakage in OpenClaw hook instruction templates (`#581`, closes `#578`).
 - Hardened explicit multi-skill ordering and blocked implicit keyword auto-activation for direct `/prompts:<name>` invocations (`#582`).
 
 ### Docs
-- Improved release-note readability for the prior release and refreshed OpenClaw guidance/localized docs.
+- Aligned notification skill inventory/docs with the canonical `configure-notifications` model and improved prior release-note readability.
 
 ## [0.8.1] - 2026-03-05
 

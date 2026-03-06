@@ -9,14 +9,15 @@ Verdict: **GO** ✅
 - Version bump to `0.8.2` (`package.json`, `package-lock.json`)
 - Changelog update (`CHANGELOG.md`)
 - Release note draft (`docs/release-notes-0.8.2.md`)
+- Final release candidate aligned to `main`
 
 ## Validation evidence
 
 | Check | Command | Result |
 |---|---|---|
-| Build | `npm run build` | PASS |
-| Full test suite | `npm test` | PASS (`1928` pass / `0` fail) |
-| No-unused type gate | `npm run check:no-unused` | PASS |
+| Build | `npm run build` | PASS (`0:07.48`) |
+| Full test suite | `npm test` | PASS (`1933` pass / `0` fail, `2:19.38`) |
+| No-unused type gate | `npm run check:no-unused` | PASS (`0:04.48`) |
 | CLI help smoke | `node bin/omx.js --help` | PASS |
 | Version smoke | `node bin/omx.js version` | PASS (`oh-my-codex v0.8.2`) |
 | Status smoke | `node bin/omx.js status` | PASS |
@@ -24,18 +25,11 @@ Verdict: **GO** ✅
 | Setup dry-run smoke | `node bin/omx.js setup --dry-run` | PASS |
 | Cancel smoke | `node bin/omx.js cancel` | PASS |
 
-## Evidence artifacts
-
-- `.release-logs/build.log`
-- `.release-logs/test.log`
-- `.release-logs/test-rerun-0.8.2.log`
-- `.release-logs/smoke-0.8.2.log`
-
 ## Risk notes
 
-- No failing release gates were observed in local validation.
-- `npm test` runtime was long (~259s) due expected long-running tmux/notification integration suites; all completed successfully.
-- The main `dev` worktree currently contains uncommitted release-prep changes only; keep this release prep isolated from unrelated follow-up edits.
+- No failing checks were observed in final release validation.
+- `npm test` includes long-running notification/tmux/team integration coverage, but all suites completed successfully.
+- Release details tag merged PRs `#571`, `#572`, `#575`, `#576`, `#579`, `#580`, `#581`, `#582`, `#583`, `#584` and related issues `#564`, `#573`, `#574`, `#578`.
 
 ## Final verdict
 

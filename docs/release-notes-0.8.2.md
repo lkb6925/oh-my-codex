@@ -2,7 +2,7 @@
 
 Released: **2026-03-06**
 
-This is a **targeted patch release** focused on team-provider expansion, safer defaults, setup hygiene, and a couple of correctness fixes in keyword handling and OpenClaw hook templating.
+This is a **targeted patch release** focused on team-provider expansion, safer defaults, setup hygiene, and correctness fixes across setup, keyword handling, and OpenClaw hook templating.
 
 ---
 
@@ -10,8 +10,9 @@ This is a **targeted patch release** focused on team-provider expansion, safer d
 
 - `$team` / team runtime can now launch **Gemini CLI workers** alongside Codex and Claude (`#576`, `#579`, related issue `#573`).
 - Default frontier-model fallback is now routed through **`DEFAULT_FRONTIER_MODEL`** instead of hardcoded model strings (`#583`).
-- Setup is stricter about installing only **catalog-active/internal skills** and cleans stale shipped dirs on `--force` (`#575`, `#580`, closes `#574`).
-- Fixed two patch-level bugs: unresolved OpenClaw placeholders (`#581`, closes `#578`) and keyword detection ordering/`/prompts` guarding (`#582`).
+- Setup/install is stricter about shipping only the right skills, now ships **`configure-notifications`** canonically, and cleans stale legacy skill dirs on `--force` (`#575`, `#580`, `#584`, closes `#574`).
+- `omx setup` now skips the deprecated **`[tui]`** config section for Codex CLI `>= 0.107.0` (`#572`, fixes `#564`).
+- Fixed two additional patch-level bugs: unresolved OpenClaw placeholders (`#581`, closes `#578`) and keyword detection ordering/`/prompts` guarding (`#582`).
 
 ---
 
@@ -48,19 +49,22 @@ Current behavior from this release:
 
 ### 3) Setup/install behavior is cleaner and safer
 
-Setup now respects the catalog manifest more strictly:
+Setup now respects the catalog manifest and current Codex compatibility more strictly:
 - installs only `active` / `internal` skills
+- canonically ships `configure-notifications`
 - skips deprecated / merged / alias entries
-- removes stale shipped skill directories during `--force` cleanup
+- removes stale shipped / legacy notification skill directories during `--force` cleanup
+- skips writing the deprecated `[tui]` section when Codex CLI is `>= 0.107.0`
 
 **Why this matters:**
-- cleaner installs
+- cleaner installs and upgrades
 - fewer stale shipped assets after upgrades
+- fewer setup/config issues on newer Codex CLI versions
 - lower chance of confusing doctor/setup results
 
 ### 4) Patch fixes
 
-Two correctness fixes landed in this release:
+Two additional correctness fixes landed in this release:
 
 - **OpenClaw template safety:** unresolved placeholders in hook instruction templates now fall back safely instead of leaking literal placeholders into instructions (`#581`, closes `#578`).
 - **Keyword detection hardening:** explicit multi-skill order is preserved left-to-right, missing keyword aliases were restored, and direct `/prompts:<name>` invocations are protected from unintended implicit keyword activation (`#582`).
@@ -70,6 +74,7 @@ Two correctness fixes landed in this release:
 ## Related PRs and issues
 
 ### Merged PRs in this release
+- #584 — fix(setup): canonicalize `configure-notifications` skill
 - #583 — feat: use `DEFAULT_FRONTIER_MODEL` for default model fallback
 - #582 — fix(keyword): explicit multi-skill order + `/prompts` guard hardening
 - #581 — fix(openclaw): prevent unresolved placeholder leakage in hook instruction templates
@@ -77,9 +82,11 @@ Two correctness fixes landed in this release:
 - #579 — feat(team): add Gemini CLI worker support
 - #576 — feat(team): add Gemini CLI worker support (`#573`)
 - #575 — fix: setup skips deprecated/merged/alias catalog skills
+- #572 — fix(setup): skip `[tui]` section for Codex >= `0.107.0`
 - #571 — docs: improve OpenClaw gateway configuration examples
 
 ### Related issues tagged in this release
+- #564 — setup/config breakage caused by deprecated `[tui]` generation on newer Codex CLI versions
 - #573 — feat(team): add Gemini CLI worker support to OMX team mode
 - #574 — setup should skip non-installable catalog skills and clean stale shipped dirs
 - #578 — unresolved placeholder leakage in OpenClaw hook instruction templates
@@ -89,11 +96,11 @@ Two correctness fixes landed in this release:
 ## Scope and commit window
 
 Release scope was prepared from non-merge commits in:
-- `v0.8.1..dev`
+- `v0.8.1..main`
 
 Snapshot at preparation time:
-- **10 non-merge commits** (`2026-03-05` to `2026-03-06`)
-- **57 files changed** (`+1,408 / -154`)
+- **15 non-merge commits** (`2026-03-05` to `2026-03-06`)
+- **70 files changed** (`+2,300 / -243`)
 
 ---
 
@@ -101,7 +108,7 @@ Snapshot at preparation time:
 
 Release verification evidence is recorded in `docs/qa/release-readiness-0.8.2.md`.
 
-Planned release gates:
+Release gates for the final `main` release candidate:
 - `npm run build`
 - `npm test`
 - `npm run check:no-unused`
