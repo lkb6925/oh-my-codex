@@ -101,8 +101,11 @@
 | ralph-init | DONE | ~/.agents/skills/ralph-init/SKILL.md |
 | ~~release~~ | REMOVED (v0.5.0) | — |
 | omx-setup | DONE | ~/.agents/skills/omx-setup/SKILL.md |
-| configure-telegram | DONE | ~/.agents/skills/configure-telegram/SKILL.md |
-| configure-discord | DONE | ~/.agents/skills/configure-discord/SKILL.md |
+| configure-notifications | DONE | ~/.agents/skills/configure-notifications/SKILL.md |
+| ~~configure-telegram~~ | MERGED -> configure-notifications | — |
+| ~~configure-discord~~ | MERGED -> configure-notifications | — |
+| ~~configure-slack~~ | MERGED -> configure-notifications | — |
+| ~~configure-openclaw~~ | MERGED -> configure-notifications | — |
 | ~~writer-memory~~ | REMOVED (v0.5.0) | — |
 | ~~project-session-manager~~ | REMOVED (v0.5.0) | — |
 | ~~psm~~ | REMOVED (v0.5.0) | — |

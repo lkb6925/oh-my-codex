@@ -121,8 +121,7 @@ Skill docs are operational runbooks. The migration focused on:
 | `skills/analyze/SKILL.md` | 1 | 1 | Codex path/terminology normalization; examples updated to Codex-first conventions. | No direct runtime behavior change; instruction correctness improved. |
 | `skills/autopilot/SKILL.md` | 11 | 16 | Codex path/terminology normalization; examples updated to Codex-first conventions. | No direct runtime behavior change; instruction correctness improved. |
 | `skills/code-review/SKILL.md` | 1 | 1 | Codex path/terminology normalization; examples updated to Codex-first conventions. | No direct runtime behavior change; instruction correctness improved. |
-| `skills/configure-discord/SKILL.md` | 6 | 6 | Codex path/terminology normalization; examples updated to Codex-first conventions. | No direct runtime behavior change; instruction correctness improved. |
-| `skills/configure-telegram/SKILL.md` | 6 | 6 | Codex path/terminology normalization; examples updated to Codex-first conventions. | No direct runtime behavior change; instruction correctness improved. |
+| `skills/configure-notifications/SKILL.md` | 0 | 0 | Canonical notification setup skill replacing standalone configure-* variants. | Catalog/install surface now converges on one entry point. |
 | `skills/doctor/SKILL.md` | 47 | 45 | Codex path/terminology normalization; examples updated to Codex-first conventions. | No direct runtime behavior change; instruction correctness improved. |
 | `skills/ecomode/SKILL.md` | 1 | 1 | Codex path/terminology normalization; examples updated to Codex-first conventions. | No direct runtime behavior change; instruction correctness improved. |
 | `skills/frontend-ui-ux/SKILL.md` | 2 | 2 | Codex path/terminology normalization; examples updated to Codex-first conventions. | No direct runtime behavior change; instruction correctness improved. |
