@@ -114,6 +114,7 @@ function canTransitionDispatchStatus(from: TeamDispatchRequestStatus, to: TeamDi
   if (from === to) return true;
   if (from === 'pending' && (to === 'notified' || to === 'failed')) return true;
   if (from === 'notified' && (to === 'delivered' || to === 'failed')) return true;
+  if (from === 'failed' && to === 'notified') return true;
   return false;
 }
 
@@ -224,7 +225,10 @@ export async function transitionDispatchRequest(
       attempt_count: Math.max(0, nextAttemptCount),
       updated_at: nowIso,
     };
-    if (to === 'notified') next.notified_at = patch.notified_at ?? nowIso;
+    if (to === 'notified') {
+      next.notified_at = patch.notified_at ?? nowIso;
+      next.failed_at = patch.failed_at;
+    }
     if (to === 'delivered') next.delivered_at = patch.delivered_at ?? nowIso;
     if (to === 'failed') next.failed_at = patch.failed_at ?? nowIso;
 

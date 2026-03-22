@@ -288,7 +288,7 @@ exit 1
     }
   });
 
-  it('dispatch request store allows failed->failed reason patch and blocks failed->notified', async () => {
+  it('dispatch request store allows failed reason patches and fallback recovery to notified', async () => {
     const cwd = await mkdtemp(join(tmpdir(), 'omx-team-dispatch-store-failed-'));
     try {
       await initTeamState('team-dispatch-failed', 't', 'executor', 1, cwd);
@@ -310,26 +310,28 @@ exit 1
         cwd,
       );
 
-      const invalidNotified = await markDispatchRequestNotified(
+      const recovered = await markDispatchRequestNotified(
         'team-dispatch-failed',
         queued.request.request_id,
-        { last_reason: 'should_not_transition' },
+        { last_reason: 'fallback_confirmed:tmux_send_keys_sent', failed_at: undefined },
         cwd,
       );
-      assert.equal(invalidNotified, null);
+      assert.equal(recovered?.status, 'notified');
+      assert.equal(recovered?.last_reason, 'fallback_confirmed:tmux_send_keys_sent');
+      assert.equal(recovered?.failed_at, undefined);
 
       const patched = await transitionDispatchRequest(
         'team-dispatch-failed',
         queued.request.request_id,
-        'failed',
-        'failed',
+        'notified',
+        'notified',
         { last_reason: 'fallback_confirmed_after_failed_receipt:tmux_send_keys_sent' },
         cwd,
       );
-      assert.equal(patched?.status, 'failed');
+      assert.equal(patched?.status, 'notified');
       assert.equal(patched?.last_reason, 'fallback_confirmed_after_failed_receipt:tmux_send_keys_sent');
       const reread = await readDispatchRequest('team-dispatch-failed', queued.request.request_id, cwd);
-      assert.equal(reread?.status, 'failed');
+      assert.equal(reread?.status, 'notified');
       assert.equal(reread?.last_reason, 'fallback_confirmed_after_failed_receipt:tmux_send_keys_sent');
     } finally {
       await rm(cwd, { recursive: true, force: true });

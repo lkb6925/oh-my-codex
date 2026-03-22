@@ -2885,16 +2885,14 @@ async function dispatchCriticalInboxInstruction(params: {
     const fallback = await notifyWorkerOutcome(config, workerIndex, triggerMessage, paneId);
     if (fallback.ok) {
       if (isBridgeEnabled()) {
-        try { getDefaultBridge(cwd).execCommand({ command: 'MarkFailed', request_id: queued.request_id, reason: `fallback_confirmed_after_failed_receipt:${fallback.reason}` }); } catch (_) { /* non-fatal */ }
+        try { getDefaultBridge(cwd).execCommand({ command: 'MarkNotified', request_id: queued.request_id, channel: `fallback_confirmed_after_failed_receipt:${fallback.reason}` }); } catch (_) { /* non-fatal */ }
       }
-      await transitionDispatchRequest(
+      await markDispatchRequestNotified(
         teamName,
         queued.request_id,
-        'failed',
-        'failed',
-        { last_reason: `fallback_confirmed_after_failed_receipt:${fallback.reason}` },
+        { last_reason: `fallback_confirmed_after_failed_receipt:${fallback.reason}`, failed_at: undefined },
         cwd,
-      ).catch(() => {});
+      ).catch(() => null);
       return {
         ok: true,
         transport: fallback.transport,
@@ -3026,14 +3024,12 @@ async function finalizeHookPreferredMailboxDispatch(params: {
   if (receipt?.status === 'failed') {
     if (fallback.ok) {
       await markMessageNotified(teamName, workerName, messageId, cwd).catch(() => false);
-      await transitionDispatchRequest(
+      await markDispatchRequestNotified(
         teamName,
         requestId,
-        'failed',
-        'failed',
-        { message_id: messageId, last_reason: `fallback_confirmed_after_failed_receipt:${fallback.reason}` },
+        { message_id: messageId, last_reason: `fallback_confirmed_after_failed_receipt:${fallback.reason}`, failed_at: undefined },
         cwd,
-      ).catch(() => {});
+      ).catch(() => null);
       return {
         ok: true,
         transport: fallback.transport,
