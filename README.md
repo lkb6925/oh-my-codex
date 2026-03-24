@@ -185,6 +185,10 @@ omx sparkshell --tmux-pane %12 --tail-lines 400
 - [Français](./README.fr.md)
 - [Italiano](./README.it.md)
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Yeachan-Heo/oh-my-codex&type=date&legend=top-left)](https://www.star-history.com/#Yeachan-Heo/oh-my-codex&type=date&legend=top-left)
+
 ## License
 
 MIT
