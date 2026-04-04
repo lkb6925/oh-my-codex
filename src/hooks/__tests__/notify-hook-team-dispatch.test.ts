@@ -212,7 +212,9 @@ describe('notify-hook team dispatch consumer', () => {
       const request = await readDispatchRequest('alpha', queued.request.request_id, cwd);
       assert.equal(request?.status, 'notified');
       const mailbox = await listMailboxMessages('alpha', 'worker-1', cwd);
-      assert.ok(mailbox[0]?.notified_at);
+      const mailboxMessage = mailbox.find((entry) => entry.message_id === msg.message_id);
+      assert.ok(mailboxMessage, 'expected the queued mailbox message to remain readable');
+      assert.ok(mailboxMessage?.notified_at);
     } finally {
       await rm(cwd, { recursive: true, force: true });
     }
@@ -612,7 +614,9 @@ exit 0
       const request = await readDispatchRequest('alpha', queued.request.request_id, cwd);
       assert.equal(request?.status, 'notified');
       const mailbox = await listMailboxMessages('alpha', 'worker-1', cwd);
-      assert.ok(mailbox[0]?.notified_at);
+      const mailboxMessage = mailbox.find((entry) => entry.message_id === msg.message_id);
+      assert.ok(mailboxMessage, 'expected the queued mailbox message to remain readable');
+      assert.ok(mailboxMessage?.notified_at);
     } finally {
       if (typeof previousStateRoot === 'string') process.env.OMX_TEAM_STATE_ROOT = previousStateRoot;
       else delete process.env.OMX_TEAM_STATE_ROOT;
