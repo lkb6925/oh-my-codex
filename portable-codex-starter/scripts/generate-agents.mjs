@@ -5,7 +5,6 @@ import { join, basename } from "node:path";
 const ROOT = process.cwd();
 const PROMPTS_DIR = join(ROOT, "prompts");
 const AGENTS_DIR = join(ROOT, ".codex", "agents");
-const EXCLUDED_ROLES = new Set([]);
 
 const LOW_ROLES = new Set([
   "explore",
@@ -37,6 +36,26 @@ const ROLE_OVERRIDES = new Map([
   ["explore-harness", { sandbox_mode: "read-only" }],
 ]);
 
+const BLOCKED_LINE_PATTERNS = [
+  /USE_OMX_EXPLORE_CMD/i,
+  /\.omx\b/i,
+  /\btmux\b/i,
+  /OMX_/i,
+  /AskUserQuestion/,
+  /request_user_input/,
+  /state_write/,
+  /state_read/,
+  /ToolSearch/,
+  /mcp__x__ask_codex/,
+  /\bralph\b/i,
+  /\bultrawork\b/i,
+  /\bautopilot\b/i,
+  /team verification path/i,
+  /launch hints/i,
+  /available-agent-types roster/i,
+  /staffing \/ role-allocation guidance/i,
+];
+
 function stripFrontmatter(content) {
   const match = content.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
   return match ? content.slice(match[0].length).trim() : content.trim();
@@ -64,27 +83,10 @@ function sanitizeInstructions(content) {
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (
-      /USE_OMX_EXPLORE_CMD/i.test(line) ||
-      /\bomx\b/i.test(line) ||
-      /\.omx\b/i.test(line) ||
-      /\btmux\b/i.test(line) ||
-      /OMX_/i.test(line) ||
-      /AskUserQuestion/.test(line) ||
-      /request_user_input/.test(line) ||
-      /state_write/.test(line) ||
-      /state_read/.test(line) ||
-      /ToolSearch/.test(line) ||
-      /mcp__x__ask_codex/.test(line) ||
-      /\bralph\b/i.test(line) ||
-      /\bultrawork\b/i.test(line) ||
-      /\bautopilot\b/i.test(line) ||
-      /team verification path/i.test(line) ||
-      /launch hints/i.test(line) ||
-      /available-agent-types roster/i.test(line) ||
-      /staffing \/ role-allocation guidance/i.test(line) ||
-      trimmed.startsWith("<!-- OMX:")
-    ) {
+    if (/\bomx\b/i.test(line) || BLOCKED_LINE_PATTERNS.some((pattern) => pattern.test(line))) {
+      continue;
+    }
+    if (trimmed.startsWith("<!-- OMX:")) {
       continue;
     }
     filtered.push(line);
@@ -135,27 +137,26 @@ async function main() {
     .filter((file) => file.endsWith(".md"))
     .sort();
 
-  let count = 0;
-  for (const file of files) {
-    const role = basename(file, ".md");
-    if (EXCLUDED_ROLES.has(role)) continue;
-    const source = await readFile(join(PROMPTS_DIR, file), "utf8");
-    const description = parseDescription(source, `${role} custom agent`);
-    const developerInstructions = sanitizeInstructions(source);
-    const reasoningEffort = inferReasoning(role);
-    const overrides = ROLE_OVERRIDES.get(role) || {};
-    const toml = toToml({
-      name: role,
-      description,
-      reasoningEffort,
-      developerInstructions,
-      overrides,
-    });
-    await writeFile(join(AGENTS_DIR, `${role}.toml`), toml, "utf8");
-    count += 1;
-  }
+  await Promise.all(
+    files.map(async (file) => {
+      const role = basename(file, ".md");
+      const source = await readFile(join(PROMPTS_DIR, file), "utf8");
+      const description = parseDescription(source, `${role} custom agent`);
+      const developerInstructions = sanitizeInstructions(source);
+      const reasoningEffort = inferReasoning(role);
+      const overrides = ROLE_OVERRIDES.get(role) || {};
+      const toml = toToml({
+        name: role,
+        description,
+        reasoningEffort,
+        developerInstructions,
+        overrides,
+      });
+      await writeFile(join(AGENTS_DIR, `${role}.toml`), toml, "utf8");
+    }),
+  );
 
-  console.log(`Generated ${count} agent files in ${AGENTS_DIR}`);
+  console.log(`Generated ${files.length} agent files in ${AGENTS_DIR}`);
 }
 
 main().catch((error) => {

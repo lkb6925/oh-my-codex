@@ -1,6 +1,7 @@
 import { readdir, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { parseArgs } from "./lib/cli-utils.mjs";
 
 const args = parseArgs(process.argv.slice(2));
 const target = resolve(args.target || process.cwd());
@@ -33,36 +34,40 @@ const githubInstructionsPath = join(target, ".github", "instructions");
 const githubSkillsPath = join(target, ".github", "skills");
 
 const agentCount = await countAgentFiles(agentsPath);
-const agentsSkillCount = await countSkillDirectories(agentsSkillsPath);
-const codexSkillCount = await countSkillDirectories(codexSkillsPath);
+const agentsSkillScan = await inspectSkillDirectories(agentsSkillsPath);
+const codexSkillScan = await inspectSkillDirectories(codexSkillsPath);
 
 if (skillsRoot === ".agents") {
   checks.push(checkExists(".agents/skills", agentsSkillsPath));
   checks.push({
     name: "skill count",
-    ok: agentsSkillCount === expected.skills,
-    detail: `${agentsSkillCount}/${expected.skills} in .agents/skills`,
+    ok: agentsSkillScan.count === expected.skills,
+    detail: `${agentsSkillScan.count}/${expected.skills} in .agents/skills`,
   });
+  checks.push(checkOptionalIssues(".agents/skills structure", agentsSkillScan.issues));
 } else if (skillsRoot === ".codex") {
   checks.push(checkExists(".codex/skills", codexSkillsPath));
   checks.push({
     name: "skill count",
-    ok: codexSkillCount === expected.skills,
-    detail: `${codexSkillCount}/${expected.skills} in .codex/skills`,
+    ok: codexSkillScan.count === expected.skills,
+    detail: `${codexSkillScan.count}/${expected.skills} in .codex/skills`,
   });
+  checks.push(checkOptionalIssues(".codex/skills structure", codexSkillScan.issues));
 } else if (skillsRoot === "both") {
   checks.push(checkExists(".agents/skills", agentsSkillsPath));
   checks.push(checkExists(".codex/skills", codexSkillsPath));
   checks.push({
     name: "skill count (.agents)",
-    ok: agentsSkillCount === expected.skills,
-    detail: `${agentsSkillCount}/${expected.skills}`,
+    ok: agentsSkillScan.count === expected.skills,
+    detail: `${agentsSkillScan.count}/${expected.skills}`,
   });
   checks.push({
     name: "skill count (.codex)",
-    ok: codexSkillCount === expected.skills,
-    detail: `${codexSkillCount}/${expected.skills}`,
+    ok: codexSkillScan.count === expected.skills,
+    detail: `${codexSkillScan.count}/${expected.skills}`,
   });
+  checks.push(checkOptionalIssues(".agents/skills structure", agentsSkillScan.issues));
+  checks.push(checkOptionalIssues(".codex/skills structure", codexSkillScan.issues));
 } else {
   checks.push({
     name: "skills-root",
@@ -113,7 +118,7 @@ if (!coreOnly) {
 
   const githubAgentCount = await countMarkdownFiles(githubAgentsPath, ".agent.md");
   const githubInstructionCount = await countMarkdownFiles(githubInstructionsPath, ".instructions.md");
-  const githubSkillCount = await countSkillDirectories(githubSkillsPath);
+  const githubSkillScan = await inspectSkillDirectories(githubSkillsPath);
 
   checks.push({
     name: "GitHub agent count",
@@ -127,9 +132,10 @@ if (!coreOnly) {
   });
   checks.push({
     name: "GitHub skill count",
-    ok: githubSkillCount === expected.githubSkills,
-    detail: `${githubSkillCount}/${expected.githubSkills}`,
+    ok: githubSkillScan.count === expected.githubSkills,
+    detail: `${githubSkillScan.count}/${expected.githubSkills}`,
   });
+  checks.push(checkOptionalIssues("GitHub skills structure", githubSkillScan.issues));
 }
 
 const hasFailures = checks.some((check) => !check.ok && !check.optional);
@@ -151,30 +157,6 @@ if (hasFailures) {
   console.log("\nDoctor passed.");
 }
 
-function parseArgs(argv) {
-  const parsed = {};
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (!arg.startsWith("--")) continue;
-    const inlineEquals = arg.indexOf("=");
-    if (inlineEquals !== -1) {
-      const key = arg.slice(2, inlineEquals);
-      const value = arg.slice(inlineEquals + 1);
-      parsed[key] = value === "" ? true : value;
-      continue;
-    }
-    const key = arg.slice(2);
-    const next = argv[index + 1];
-    if (!next || next.startsWith("--")) {
-      parsed[key] = true;
-      continue;
-    }
-    parsed[key] = next;
-    index += 1;
-  }
-  return parsed;
-}
-
 function checkExists(name, path) {
   return {
     name,
@@ -191,27 +173,38 @@ function checkOptional(name, path) {
   };
 }
 
+function checkOptionalIssues(name, issues) {
+  return {
+    name,
+    ok: issues.length === 0,
+    optional: true,
+    detail: issues.length === 0 ? "" : issues.join("; "),
+  };
+}
+
 async function countAgentFiles(path) {
   if (!existsSync(path)) return 0;
   const entries = await readdir(path, { withFileTypes: true });
   return entries.filter((entry) => entry.isFile() && entry.name.endsWith(".toml")).length;
 }
 
-async function countSkillDirectories(path) {
-  if (!existsSync(path)) return 0;
+async function inspectSkillDirectories(path) {
+  if (!existsSync(path)) return { count: 0, issues: [] };
   const entries = await readdir(path, { withFileTypes: true });
   let count = 0;
+  const issues = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     const skillPath = join(path, entry.name, "SKILL.md");
     try {
       await stat(skillPath);
       count += 1;
-    } catch {
-      // Ignore malformed skill directories.
+    } catch (error) {
+      const reason = error?.code === "ENOENT" ? "missing SKILL.md" : error?.code || "stat failed";
+      issues.push(`${entry.name}: ${reason}`);
     }
   }
-  return count;
+  return { count, issues };
 }
 
 async function countMarkdownFiles(path, suffix) {
