@@ -34,6 +34,10 @@ Portable skills live under `.agents/skills/`.
 - For cleanup or refactor work, lock behavior with tests first when practical.
 - Run relevant tests, lint, and type checks after changes when the project supports them.
 - Final reports must include changed files, verification performed, and remaining risks.
+- This starter assumes a Maker/Checker split:
+  - Codex is the maker and local fixer.
+  - Gemini is the strict checker for security, memory, and severe architecture risk.
+- If `.ai/gemini-report.json` exists, read it before attempting the next fix pass.
 
 ## Delegation Rules
 
@@ -164,6 +168,7 @@ Before declaring completion:
 - run relevant tests or explain why none were run
 - mention unresolved risks or assumptions
 - cite concrete evidence for important claims
+- if Gemini gate failed, use `.ai/gemini-report.json` as the primary checker artifact instead of guessing from raw CI logs
 
 ## Output Contract
 

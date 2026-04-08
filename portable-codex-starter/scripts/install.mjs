@@ -1,4 +1,6 @@
-import { cp, mkdir, stat } from "node:fs/promises";
+import { chmod, cp, mkdir, stat } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "./lib/cli-utils.mjs";
@@ -18,6 +20,9 @@ await copyInto(join(packRoot, "AGENTS.md"), join(target, "AGENTS.md"));
 await copyTree(join(packRoot, ".codex", "agents"), join(target, ".codex", "agents"));
 await copyInto(join(packRoot, "README.md"), join(target, ".codex", "starter-docs", "README.md"));
 await copyTree(join(packRoot, "docs"), join(target, ".codex", "starter-docs", "docs"));
+await copyTree(join(packRoot, ".ai"), join(target, ".ai"));
+await copyTree(join(packRoot, ".githooks"), join(target, ".githooks"));
+await ensureHookExecutable(join(target, ".githooks", "pre-push"));
 
 if (skillsRoot === ".agents" || skillsRoot === "both") {
   await copyTree(join(packRoot, ".agents", "skills"), join(target, ".agents", "skills"));
@@ -60,6 +65,8 @@ if (!coreOnly) {
 }
 
 const modeLabel = coreOnly ? "core-only portable starter" : "full portable starter";
+
+configureGitHooks(target);
 console.log(`Installed ${modeLabel} into ${target}`);
 
 async function ensureDir(path) {
@@ -83,4 +90,27 @@ async function copyTree(source, destination) {
   }
   await mkdir(dirname(destination), { recursive: true });
   await cp(source, destination, { recursive: true, force: true });
+}
+
+function configureGitHooks(target) {
+  if (!existsSync(join(target, ".git")) || !existsSync(join(target, ".githooks"))) {
+    return;
+  }
+
+  try {
+    execFileSync("git", ["config", "core.hooksPath", ".githooks"], {
+      cwd: target,
+      stdio: "ignore",
+    });
+  } catch {
+    // Best effort only. Doctor and README explain the expected hook path.
+  }
+}
+
+async function ensureHookExecutable(path) {
+  try {
+    await chmod(path, 0o755);
+  } catch {
+    // Best effort only. Doctor will flag a missing or non-executable hook.
+  }
 }

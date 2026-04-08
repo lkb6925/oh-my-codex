@@ -9,9 +9,11 @@
 
 현재 포함:
 
+- `.ai/`
 - `.devcontainer/devcontainer.json`
 - `.devcontainer/scripts/post-create.sh`
 - `.devcontainer/scripts/update-content.sh`
+- `.githooks/`
 
 현재 하는 일:
 
@@ -21,6 +23,7 @@
 - recommended secrets 제안
 - `updateContentCommand`로 의존성 준비
 - `postCreateCommand`로 세션 마감 작업 실행
+- `.githooks/pre-push`를 통해 Gemini checker loop 사용 가능
 - 최소 머신 사양 제안
   - 4 CPU
   - 8GB memory
@@ -73,6 +76,8 @@ GitHub skills는 다음 절차를 빠르게 재사용하기 위한 것이다.
 
 - `.github/hooks/copilot-policy.json`
 - hook scripts
+- `.githooks/pre-push`
+- `.ai/scripts/gemini-gate.mjs`
 
 용도:
 
@@ -80,6 +85,8 @@ GitHub skills는 다음 절차를 빠르게 재사용하기 위한 것이다.
 - user prompt 로그
 - tool use 전 정책 검사
 - 위험 명령 차단
+- push 전 Gemini checker 실행
+- `.ai/gemini-report.json` 생성
 
 ## 5. cloud agent 환경 맞춤화
 
@@ -107,6 +114,8 @@ GitHub skills는 다음 절차를 빠르게 재사용하기 위한 것이다.
 - Node/Rust 품질 스크립트가 있으면 실행
 - starter 핵심 scaffolding 존재 여부 확인
 - hook JSON 기본 검증
+- `GEMINI_API_KEY`가 있어야 Gemini checker gate 통과 가능
+- `CRITICAL_HIGH`면 quality gate 실패
 
 추가로 수동 활성화가 필요한 것은 [품질 게이트 가이드](quality-gates.md)에 정리했다.
 
@@ -152,8 +161,9 @@ GitHub skills는 다음 절차를 빠르게 재사용하기 위한 것이다.
 2. `doctor` 확인
 3. `.codex/config.toml` 확인
 4. 필요하면 `.codex/mcp-servers.example.toml`에서 선택형 MCP 섹션만 복사
-5. Codespaces secret 준비
-6. GitHub에서 Copilot code review / Code Quality / branch protection 설정
+5. `GEMINI_API_KEY`와 `CONTEXT7_API_KEY` Codespaces secret 준비
+6. `.ai/gemini-report.json`이 무시되는지 확인
+7. GitHub에서 Copilot code review / Code Quality / branch protection 설정
 
 ## 공식 문서
 

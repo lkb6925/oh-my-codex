@@ -29,6 +29,9 @@ const configExamplePath = join(target, ".codex", "config.toml.example");
 const mcpExamplePath = join(target, ".codex", "mcp-servers.example.toml");
 const starterDocsReadmePath = join(target, ".codex", "starter-docs", "README.md");
 const starterDocsAutomationPath = join(target, ".codex", "starter-docs", "docs", "automation-playbook.md");
+const aiScriptsPath = join(target, ".ai", "scripts");
+const gitHooksPath = join(target, ".githooks");
+const prePushHookPath = join(gitHooksPath, "pre-push");
 const githubAgentsPath = join(target, ".github", "agents");
 const githubInstructionsPath = join(target, ".github", "instructions");
 const githubSkillsPath = join(target, ".github", "skills");
@@ -87,10 +90,18 @@ checks.push(checkOptional("config.toml.example", configExamplePath));
 checks.push(checkOptional("mcp-servers.example.toml", mcpExamplePath));
 checks.push(checkOptional("starter-docs/README.md", starterDocsReadmePath));
 checks.push(checkOptional("starter-docs/docs/automation-playbook.md", starterDocsAutomationPath));
+checks.push(checkExists(".ai/scripts", aiScriptsPath));
+checks.push(checkExists(".githooks", gitHooksPath));
+checks.push(checkExists(".ai/scripts/write-diff.mjs", join(aiScriptsPath, "write-diff.mjs")));
+checks.push(checkExists(".ai/scripts/gemini-check.mjs", join(aiScriptsPath, "gemini-check.mjs")));
+checks.push(checkExists(".ai/scripts/gemini-gate.mjs", join(aiScriptsPath, "gemini-gate.mjs")));
+checks.push(checkExists(".githooks/pre-push", prePushHookPath));
+checks.push(await checkExecutable(".githooks/pre-push executable", prePushHookPath));
 
 const configUsesContext7 = existsSync(configPath)
   ? (await readTextIfExists(configPath)).includes("[mcp_servers.context7]")
   : false;
+const geminiGateExists = existsSync(join(target, ".ai", "scripts", "gemini-gate.mjs"));
 
 if (configUsesContext7) {
   checks.push({
@@ -100,6 +111,17 @@ if (configUsesContext7) {
     detail: process.env.CONTEXT7_API_KEY
       ? "set"
       : "missing; Context7 may hit anonymous rate limits",
+  });
+}
+
+if (geminiGateExists) {
+  checks.push({
+    name: "GEMINI_API_KEY",
+    ok: Boolean(process.env.GEMINI_API_KEY),
+    optional: true,
+    detail: process.env.GEMINI_API_KEY
+      ? "set"
+      : "missing; Gemini checker gate and pre-push hook will fail",
   });
 }
 
@@ -173,7 +195,7 @@ if (hasFailures) {
   console.error("\nDoctor found blocking issues.");
   process.exitCode = 1;
 } else if (hasWarnings) {
-  console.log("\nDoctor found no blocking issues, but some optional files are missing.");
+  console.log("\nDoctor found no blocking issues, but some optional checks are unmet.");
 } else {
   console.log("\nDoctor passed.");
 }
@@ -232,6 +254,34 @@ async function countMarkdownFiles(path, suffix) {
   if (!existsSync(path)) return 0;
   const entries = await readdir(path, { withFileTypes: true });
   return entries.filter((entry) => entry.isFile() && entry.name.endsWith(suffix)).length;
+}
+
+async function checkExecutable(name, path) {
+  if (!existsSync(path)) {
+    return {
+      name,
+      ok: false,
+      optional: false,
+      detail: "missing",
+    };
+  }
+
+  try {
+    const info = await stat(path);
+    return {
+      name,
+      ok: Boolean(info.mode & 0o111),
+      optional: false,
+      detail: Boolean(info.mode & 0o111) ? "" : "not executable",
+    };
+  } catch (error) {
+    return {
+      name,
+      ok: false,
+      optional: false,
+      detail: error?.code || "stat failed",
+    };
+  }
 }
 
 async function readTextIfExists(path) {

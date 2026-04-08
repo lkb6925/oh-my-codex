@@ -11,16 +11,23 @@ const bothSkillsTarget = mkdtempSync(join(tmpdir(), "portable-codex-starter-both
 
 try {
   exec("node", ["scripts/generate-agents.mjs"], root);
+  exec("git", ["init"], fullTarget);
   exec("node", ["scripts/install.mjs", "--target", fullTarget, "--with-config"], root);
   exec("node", ["scripts/doctor.mjs", "--target", fullTarget], root);
+  exec("node", [".ai/scripts/write-diff.mjs"], fullTarget);
+  assertGitHookPath(fullTarget);
 
+  exec("git", ["init"], coreTarget);
   exec(
     "node",
     ["scripts/install.mjs", "--target", coreTarget, "--with-config", "--core-only"],
     root,
   );
   exec("node", ["scripts/doctor.mjs", "--target", coreTarget, "--core-only"], root);
+  exec("node", [".ai/scripts/write-diff.mjs"], coreTarget);
+  assertGitHookPath(coreTarget);
 
+  exec("git", ["init"], codexSkillsTarget);
   exec(
     "node",
     ["scripts/install.mjs", "--target", codexSkillsTarget, "--with-config", "--skills-root=.codex"],
@@ -31,7 +38,9 @@ try {
     ["scripts/doctor.mjs", "--target", codexSkillsTarget, "--skills-root=.codex"],
     root,
   );
+  assertGitHookPath(codexSkillsTarget);
 
+  exec("git", ["init"], bothSkillsTarget);
   exec(
     "node",
     ["scripts/install.mjs", "--target", bothSkillsTarget, "--with-config", "--skills-root=both"],
@@ -42,6 +51,7 @@ try {
     ["scripts/doctor.mjs", "--target", bothSkillsTarget, "--skills-root=both"],
     root,
   );
+  assertGitHookPath(bothSkillsTarget);
 
   console.log(`\nVerification succeeded. Smoke targets:`);
   console.log(`- full: ${fullTarget}`);
@@ -60,4 +70,15 @@ function exec(command, args, cwd) {
     cwd,
     stdio: "inherit",
   });
+}
+
+function assertGitHookPath(target) {
+  const hooksPath = execFileSync("git", ["config", "--get", "core.hooksPath"], {
+    cwd: target,
+    encoding: "utf8",
+  }).trim();
+
+  if (hooksPath !== ".githooks") {
+    throw new Error(`Expected core.hooksPath=.githooks, got ${hooksPath || "(empty)"}`);
+  }
 }

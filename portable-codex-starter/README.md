@@ -8,7 +8,8 @@
 - `.codex/agents/`로 역할 분리
 - `.agents/skills/`와 `.github/skills/`로 반복 절차 고정
 - `.devcontainer/`로 Codespaces 기본 환경 준비
-- `.github/`로 Copilot instruction / hooks / workflows / custom agents 추가
+- `.github/`로 선택적 GitHub/Copilot 보강층 추가
+- `.ai/`와 `.githooks/`로 Gemini checker 기반 자동 수습 루프 추가
 
 긴 설명은 아래 문서로 분리해뒀다.
 
@@ -45,8 +46,10 @@ node scripts/doctor.mjs --target /path/to/your-project --skills-root=.codex
 풀세트 기준:
 
 - `AGENTS.md`
+- `.ai/`
 - `.codex/agents/`
 - `.agents/skills/`
+- `.githooks/`
 - `.codex/config.toml`
 - `.codex/config.toml.example`
 - `.codex/mcp-servers.example.toml`
@@ -93,8 +96,12 @@ node scripts/doctor.mjs --target /path/to/your-project --skills-root=.codex
 
 - Codespaces 최소 머신 사양 제안
 - recommended secrets
-- Copilot instructions / path instructions / custom agents
+- 선택적 GitHub/Copilot instruction / custom agents / hooks
 - `ai-loop-rules`: 사실 확인 우선, 작은 단위 완료, 안전한 자동 수정 루프
+- Gemini checker 루프
+  - `.ai/diff.txt`
+  - `.ai/gemini-report.json`
+  - `.githooks/pre-push`
 - hook 기반 위험 명령 제어
 - Copilot setup workflow
 - portable quality gate workflow
@@ -120,6 +127,19 @@ starter 자체를 다시 확인하고 싶으면:
 npm run verify:kit
 ```
 
+Gemini checker를 수동으로 돌리고 싶으면:
+
+```bash
+npm run gemini:diff
+npm run gemini:check
+```
+
+또는 한 번에:
+
+```bash
+npm run gemini:gate
+```
+
 현재 기준 검증 포인트:
 
 - `.codex/agents` 33개
@@ -128,6 +148,20 @@ npm run verify:kit
 - `.github/agents` 5개
 - `.github/instructions` 6개
 - workflow 2개
+
+## Codex + Gemini 구조
+
+이 starter의 중심 구조는 이렇다.
+
+1. Codex가 구현한다.
+2. 로컬 pre-push hook이 `.ai/scripts/gemini-gate.mjs`를 실행한다.
+3. Gemini가 diff를 검사해서 `.ai/gemini-report.json`을 만든다.
+4. `CRITICAL_HIGH`면 push와 quality gate가 막힌다.
+5. Codex는 `.ai/gemini-report.json`을 읽고 다시 고친다.
+
+즉 Copilot은 보조이고, 실제 maker/checker 구조는 `Codex + Gemini`다.
+
+이 구조를 제대로 쓰려면 `GEMINI_API_KEY`가 필요하다.
 
 ## 추천 사용 흐름
 

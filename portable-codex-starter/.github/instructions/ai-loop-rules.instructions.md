@@ -50,7 +50,7 @@ excludeAgent: "code-review"
 ## 5. Safe fix loop
 
 - 수정 후 반드시 관련 로컬 테스트 또는 진단을 다시 실행한다.
-- `node scripts/gemini-check.js`가 존재하면 품질/리뷰 재검증에 포함한다.
+- `.ai/scripts/gemini-check.mjs`가 존재하면 품질/리뷰 재검증에 포함한다.
 - 자동 수정 루프는 최대 3회까지만 반복한다.
 - 동일 파일을 같은 문제로 2회 이상 만졌는데도 핵심 오류가 반복되면 루프를 중단한다.
 - 같은 실패가 반복되면 무한 루프를 피하고 현재 가설, 시도한 수정, 남은 blocker를 사용자에게 보고한다.

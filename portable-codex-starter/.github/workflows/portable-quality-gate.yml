@@ -14,9 +14,13 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -100,3 +104,16 @@ jobs:
         shell: bash
         run: |
           node -e "JSON.parse(require('node:fs').readFileSync('.github/hooks/copilot-policy.json', 'utf8'))"
+
+      - name: Require Gemini checker secret
+        shell: bash
+        run: |
+          if [ -z "${GEMINI_API_KEY:-}" ]; then
+            echo "GEMINI_API_KEY is required for the Gemini checker gate."
+            exit 1
+          fi
+
+      - name: Run Gemini checker gate
+        shell: bash
+        run: |
+          node .ai/scripts/gemini-gate.mjs
