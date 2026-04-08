@@ -12,7 +12,7 @@ const expected = {
   agents: 33,
   skills: 15,
   githubAgents: 5,
-  githubInstructions: 5,
+  githubInstructions: 6,
   githubSkills: 4,
 };
 

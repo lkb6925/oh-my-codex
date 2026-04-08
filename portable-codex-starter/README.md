@@ -94,6 +94,7 @@ node scripts/doctor.mjs --target /path/to/your-project --skills-root=.codex
 - Codespaces 최소 머신 사양 제안
 - recommended secrets
 - Copilot instructions / path instructions / custom agents
+- `ai-loop-rules`: 사실 확인 우선, 작은 단위 완료, 안전한 자동 수정 루프
 - hook 기반 위험 명령 제어
 - Copilot setup workflow
 - portable quality gate workflow
@@ -125,7 +126,7 @@ npm run verify:kit
 - `.agents/skills` 15개
 - `.github/skills` 4개
 - `.github/agents` 5개
-- `.github/instructions` 5개
+- `.github/instructions` 6개
 - workflow 2개
 
 ## 추천 사용 흐름
