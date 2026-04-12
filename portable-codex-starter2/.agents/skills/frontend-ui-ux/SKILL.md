@@ -17,6 +17,6 @@ Use this skill when the task is primarily about component design, layout, intera
 
 ## Suggested delegation
 
-- `designer` for UI architecture and implementation
-- `ux-researcher` for usability analysis
-- `information-architect` for navigation or information hierarchy work
+- `architect` for UI structure and navigation decisions
+- `executor` for implementation and polish
+- `debugger` for layout, interaction, and browser issues

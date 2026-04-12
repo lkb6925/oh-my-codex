@@ -52,12 +52,10 @@ Use native subagents when:
 - a read-only mapping pass can reduce implementation risk
 
 Preferred roles:
-- `explore` for repository mapping and lookup
-- `planner` for execution plans
-- `architect` for system design and tradeoffs
-- `executor` for implementation
-- `debugger` for root-cause analysis
-- `verifier` for completion evidence
+- `architect` for system design, tradeoffs, and framework structure
+- `planner` for execution plans and breaking work into clear todos
+- `executor` for hands-on implementation, terminal work, and code changes
+- `debugger` for root-cause analysis and fixing failures
 
 ## Execution Protocol
 

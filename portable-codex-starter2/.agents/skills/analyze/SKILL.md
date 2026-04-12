@@ -26,7 +26,7 @@ Use this skill for root-cause analysis, architecture diagnosis, or questions tha
 
 - `architect` for architecture or cross-file reasoning
 - `debugger` for failure isolation
-- `explore` for fast repository mapping
+- `planner` for scoping the next investigation steps
 
 ## Output
 

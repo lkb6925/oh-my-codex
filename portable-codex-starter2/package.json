@@ -4,8 +4,6 @@
   "type": "module",
   "scripts": {
     "doctor:kit": "node scripts/doctor.mjs",
-    "install:kit": "node scripts/install.mjs",
-    "verify:mcp-contract": "node scripts/verify-mcp-contract.mjs",
-    "verify:kit": "node scripts/verify.mjs"
+    "install:kit": "node scripts/install.mjs"
   }
 }

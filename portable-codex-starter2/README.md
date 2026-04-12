@@ -13,7 +13,7 @@ OMX와 겹치는 자동화는 넣지 않았다.
 ## 핵심만
 
 - `AGENTS.md`로 Codex 작업 태도 고정
-- `.codex/agents/`로 역할 분리
+- `.codex/agents/`에 핵심 4인방만 유지
 - `.agents/skills/`로 반복 절차 고정
 - `.devcontainer/`로 Codespaces 기본 환경 준비
 - `.codex/config.toml`로 MCP 기본값 제공
@@ -64,39 +64,19 @@ node scripts/doctor.mjs --target /path/to/your-project --skills-root=.codex
 
 ## 지금 들어 있는 Codex 역할
 
-총 30개다.
-
-자주 쓸 것만 기억하면 충분하다.
+기본 역할은 딱 4개만 남긴다.
 
 - 계획: `planner`
-- 구조 분석: `architect`
+- 구조 설계: `architect`
 - 구현: `executor`
-- 가벼운 탐색: `explore-harness`
-- 일반 탐색: `explore`
-- 코드 리뷰: `code-reviewer`
-- 보안 리뷰: `security-reviewer`
-- DB 읽기 전용 점검: `postgres-readonly`
-- DB 변경 코드 생성: `schema-to-migration`
-- 테스트/검증: `test-engineer`, `qa-tester`, `verifier`
-
-이 starter에서 뺀 역할:
-
-- `team-orchestrator`
-- `team-executor`
-- `sisyphus-lite`
-
-이 셋은 밤용 OMX 공장 철학과 더 많이 겹쳐서 제외했다.
+- 문제 해결: `debugger`
 
 ## Codex에게 이렇게 말하면 된다
 
 - `planner로 이 작업 계획만 세워줘. 아직 구현하지 마.`
 - `architect 관점으로 현재 구조의 리스크를 분석해줘.`
 - `executor처럼 바로 구현하고 테스트까지 해줘.`
-- `explore-harness로 관련 파일만 빠르게 좁혀줘.`
-- `code-reviewer처럼 현재 변경점 리뷰해줘.`
-- `security-reviewer로 인증 흐름 취약점만 봐줘.`
-- `postgres-readonly로 현재 DB 스키마 가정이 맞는지 확인해줘.`
-- `schema-to-migration으로 실제 스키마를 읽고 migration 파일까지 만들어줘. DB에는 직접 적용하지 마.`
+- `debugger로 이 에러 원인부터 잡아줘.`
 
 ## 이 starter가 맡는 범위
 
@@ -125,25 +105,12 @@ node scripts/doctor.mjs --target /path/to/your-project --skills-root=.codex
 5. 작업이 끝나면 반드시 commit/push 한다.
 6. 밤에는 VM의 OMX가 그 브랜치를 pull 해서 이어서 작업한다.
 
-## 검증 명령
+## 현재 기준 검증 포인트
 
-starter 자체를 다시 확인하고 싶으면:
-
-```bash
-npm run verify:kit
-```
-
-MCP 계약만 다시 보고 싶으면:
-
-```bash
-npm run verify:mcp-contract
-```
-
-현재 기준 검증 포인트:
-
-- `.codex/agents` 30개
-- `.agents/skills` 15개
+- `.codex/agents` 4개
+- `.agents/skills` 존재
 - `.devcontainer` 존재
+- `.codex/config.toml` 존재
 
 ## 기본 MCP와 추가 추천
 
