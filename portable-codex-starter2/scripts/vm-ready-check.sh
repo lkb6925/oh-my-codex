@@ -21,6 +21,7 @@ strict_preflight="${VM_PREFLIGHT_STRICT:-0}"
 require_cmd git || status=1
 require_cmd node || status=1
 require_cmd npm || status=1
+require_cmd bash || status=1
 
 if [[ -n "${GEMINI_API_KEY:-}" ]]; then
   echo "[PASS] GEMINI_API_KEY is set"
@@ -33,15 +34,26 @@ else
   fi
 fi
 
-if grep -q "postgresql://readonly:change-me@localhost/app" .codex/config.toml; then
+if grep -Eq "postgres(ql)?://" .codex/config.toml; then
   if [[ "${strict_preflight}" == "1" ]]; then
-    echo "[FAIL] postgres DSN is still placeholder in .codex/config.toml (VM_PREFLIGHT_STRICT=1)"
+    echo "[FAIL] Detected a hardcoded postgres URL in .codex/config.toml (VM_PREFLIGHT_STRICT=1)"
     status=1
   else
-    echo "[WARN] postgres DSN is still placeholder in .codex/config.toml. Replace it on the target VM before using postgres MCP."
+    echo "[WARN] Detected a hardcoded postgres URL in .codex/config.toml. Move it to POSTGRES_READONLY_URL."
   fi
 else
-  echo "[PASS] postgres DSN placeholder replaced"
+  echo "[PASS] No hardcoded postgres URL found in .codex/config.toml"
+fi
+
+if [[ -n "${POSTGRES_READONLY_URL:-}" ]]; then
+  echo "[PASS] POSTGRES_READONLY_URL is set"
+else
+  if [[ "${strict_preflight}" == "1" ]]; then
+    echo "[FAIL] POSTGRES_READONLY_URL is missing (VM_PREFLIGHT_STRICT=1)"
+    status=1
+  else
+    echo "[WARN] POSTGRES_READONLY_URL is missing in this shell. If VM injects it at runtime, you can ignore this warning."
+  fi
 fi
 
 echo "[INFO] Running kit doctor..."

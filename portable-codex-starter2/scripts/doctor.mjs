@@ -97,11 +97,10 @@ const configUsesContext7 = existsSync(configPath)
   : false;
 const configText = existsSync(configPath) ? await readTextIfExists(configPath) : "";
 const configUsesPostgres = configText.includes("[mcp_servers.postgres]");
-const postgresLooksReadOnly =
-  configText.includes("postgresql://readonly:") ||
-  configText.includes("postgresql://read_only:") ||
-  configText.includes("postgresql://ro_");
-const postgresIsPlaceholder = configText.includes("postgresql://readonly:change-me@localhost/app");
+const postgresHasHardcodedUrl = /postgres(ql)?:\/\//.test(configText);
+const postgresUsesEnvLauncher =
+  configText.includes('command = "bash"') &&
+  configText.includes('args = ["scripts/postgres-mcp.sh"]');
 
 if (configUsesContext7) {
   checks.push({
@@ -124,20 +123,20 @@ checks.push(checkOptional(".omx/checkpoints", checkpointsPath));
 checks.push(checkOptional(".omx/checkpoints/.gitkeep", checkpointsGitkeepPath));
 if (configUsesPostgres) {
   checks.push({
-    name: "postgres DSN looks read-only",
-    ok: postgresLooksReadOnly,
+    name: "postgres MCP uses env launcher",
+    ok: postgresUsesEnvLauncher,
     optional: true,
-    detail: postgresLooksReadOnly
-      ? "read-only naming detected"
-      : "use a dedicated read-only account for VM automation",
+    detail: postgresUsesEnvLauncher
+      ? "scripts/postgres-mcp.sh"
+      : "prefer bash launcher + POSTGRES_READONLY_URL to avoid committed credentials",
   });
   checks.push({
-    name: "postgres DSN placeholder replaced",
-    ok: !postgresIsPlaceholder,
+    name: "postgres DSN not hardcoded in config",
+    ok: !postgresHasHardcodedUrl,
     optional: true,
-    detail: postgresIsPlaceholder
-      ? "replace the sample DSN before real use"
-      : "custom DSN configured",
+    detail: postgresHasHardcodedUrl
+      ? "remove plaintext DSN and inject POSTGRES_READONLY_URL via environment"
+      : "no DSN literal found",
   });
 }
 

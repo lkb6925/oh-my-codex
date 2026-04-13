@@ -72,6 +72,12 @@ if [[ "${strict_checks}" == "1" ]] && [[ "${lint_state}" == "fail" || "${typeche
   exit 1
 fi
 
+if [[ "${strict_checks}" == "1" ]] && [[ "${typecheck_state}" == "skip" || "${test_state}" == "skip" ]]; then
+  echo "[ERROR] STRICT_LOCAL_CHECKS=1 requires both typecheck and test scripts."
+  echo "[HINT] Add npm scripts for \"typecheck\" and \"test\" (TDD-first recommended), then retry."
+  exit 1
+fi
+
 echo "[INFO] Requesting Gemini Senior Architect review..."
 tmp_output=".tmp-gemini-review.json.tmp"
 node scripts/gemini-reviewer.mjs > "${tmp_output}"

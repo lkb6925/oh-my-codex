@@ -106,6 +106,7 @@ Review the provided code changes. Focus only on:
 3. missing edge cases and exception handling
 4. missing functionality implied by the implementation
 5. maintainability risks
+6. security/data-model guardrails for auth and persistence (password hashing, unique indexes, PK strategy)
 
 Rules:
 - Never praise. Only report things that should be fixed.

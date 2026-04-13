@@ -10,5 +10,5 @@ args = ["-y", "@upstash/context7-mcp"]
 # Postgres MCP
 # Keep this read-only by default and prefer dev/staging over production.
 [mcp_servers.postgres]
-command = "npx"
-args = ["-y", "@modelcontextprotocol/server-postgres", "postgresql://readonly:change-me@localhost/app"]
+command = "bash"
+args = ["scripts/postgres-mcp.sh"]

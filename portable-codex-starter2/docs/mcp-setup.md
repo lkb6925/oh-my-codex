@@ -20,8 +20,8 @@ command = "npx"
 args = ["-y", "@upstash/context7-mcp"]
 
 [mcp_servers.postgres]
-command = "npx"
-args = ["-y", "@modelcontextprotocol/server-postgres", "postgresql://readonly:change-me@localhost/app"]
+command = "bash"
+args = ["scripts/postgres-mcp.sh"]
 ```
 
 ## 운영 규칙
@@ -34,7 +34,7 @@ args = ["-y", "@modelcontextprotocol/server-postgres", "postgresql://readonly:ch
 
 ## VM 실행 전 체크리스트
 
-1. `.codex/config.toml`의 postgres DSN placeholder를 read-only 계정 DSN으로 교체한다.
+1. `POSTGRES_READONLY_URL`을 VM secret/environment에 주입한다. (Git에 평문 저장 금지)
 2. 가능하면 `sslmode=require`를 사용한다.
 3. 권한 검증 SQL로 write/DDL 권한이 없는 계정인지 확인한다.
 4. `bash scripts/vm-ready-check.sh`로 VM 사전 점검을 통과한다.
@@ -43,7 +43,7 @@ args = ["-y", "@modelcontextprotocol/server-postgres", "postgresql://readonly:ch
 ### 참고: 로컬 포장/배포 준비 중일 때
 
 - `GEMINI_API_KEY`를 이미 VM에서 주입할 예정이면, 로컬에서 preflight 실행 시 경고만 보고 넘어가도 된다.
-- DSN을 VM에서만 최종 치환할 계획이면, placeholder 경고를 확인한 뒤 VM 배포 직전에 교체한다.
+- DSN은 파일 치환 대신 `POSTGRES_READONLY_URL` 환경 변수로만 주입한다.
 - 위 두 항목까지 실패로 강제하려면 아래처럼 strict 모드를 사용한다.
 
 ```bash
@@ -79,7 +79,7 @@ node scripts/doctor.mjs --target /path/to/your-project
 주의:
 
 - 연결 문자열은 프로젝트에 맞게 바꿔야 한다
-- 기본 예시는 placeholder다
+- 연결 문자열은 Git에 저장하지 말고 환경 변수로만 주입한다
 - 전용 read-only 계정을 써야 한다
 - read-only 접근을 우선한다
 
