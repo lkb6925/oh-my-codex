@@ -40,6 +40,16 @@ args = ["-y", "@modelcontextprotocol/server-postgres", "postgresql://readonly:ch
 4. `bash scripts/vm-ready-check.sh`로 VM 사전 점검을 통과한다.
 5. 실제 리뷰 실행은 `STRICT_LOCAL_CHECKS=1 bash scripts/get-senior-review.sh`로 수행한다.
 
+### 참고: 로컬 포장/배포 준비 중일 때
+
+- `GEMINI_API_KEY`를 이미 VM에서 주입할 예정이면, 로컬에서 preflight 실행 시 경고만 보고 넘어가도 된다.
+- DSN을 VM에서만 최종 치환할 계획이면, placeholder 경고를 확인한 뒤 VM 배포 직전에 교체한다.
+- 위 두 항목까지 실패로 강제하려면 아래처럼 strict 모드를 사용한다.
+
+```bash
+VM_PREFLIGHT_STRICT=1 bash scripts/vm-ready-check.sh
+```
+
 ## Context7
 
 용도:

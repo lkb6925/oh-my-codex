@@ -17,6 +17,7 @@ require_cmd() {
 }
 
 status=0
+strict_preflight="${VM_PREFLIGHT_STRICT:-0}"
 require_cmd git || status=1
 require_cmd node || status=1
 require_cmd npm || status=1
@@ -24,13 +25,21 @@ require_cmd npm || status=1
 if [[ -n "${GEMINI_API_KEY:-}" ]]; then
   echo "[PASS] GEMINI_API_KEY is set"
 else
-  echo "[FAIL] GEMINI_API_KEY is missing"
-  status=1
+  if [[ "${strict_preflight}" == "1" ]]; then
+    echo "[FAIL] GEMINI_API_KEY is missing (VM_PREFLIGHT_STRICT=1)"
+    status=1
+  else
+    echo "[WARN] GEMINI_API_KEY is missing in this shell. If the VM already injects it, you can ignore this warning."
+  fi
 fi
 
 if grep -q "postgresql://readonly:change-me@localhost/app" .codex/config.toml; then
-  echo "[FAIL] postgres DSN is still placeholder in .codex/config.toml"
-  status=1
+  if [[ "${strict_preflight}" == "1" ]]; then
+    echo "[FAIL] postgres DSN is still placeholder in .codex/config.toml (VM_PREFLIGHT_STRICT=1)"
+    status=1
+  else
+    echo "[WARN] postgres DSN is still placeholder in .codex/config.toml. Replace it on the target VM before using postgres MCP."
+  fi
 else
   echo "[PASS] postgres DSN placeholder replaced"
 fi
