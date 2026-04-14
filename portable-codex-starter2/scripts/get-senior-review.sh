@@ -69,6 +69,12 @@ run_npm_check() {
       echo "[PASS] ${script_name}"
       return 0
     fi
+    timeout_exit_code=$?
+    if [[ "${timeout_exit_code}" -eq 124 ]]; then
+      echo "[FAIL] ${script_name} (TIMEOUT after ${test_timeout_seconds}s - avoid watch mode)"
+      echo "[TIMEOUT] ${script_name} exceeded ${test_timeout_seconds}s; disable watch mode." >> "${output_file}"
+      return 1
+    fi
   else
     if npm run "$script_name" >> "${output_file}" 2>&1; then
       echo "[PASS] ${script_name}"

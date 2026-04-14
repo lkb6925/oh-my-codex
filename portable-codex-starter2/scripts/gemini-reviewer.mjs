@@ -135,7 +135,7 @@ const testOutput = fs.existsSync(GEMINI_TEST_OUTPUT_PATH)
     )
   : "(missing)";
 const localChecks = fs.existsSync(GEMINI_LOCAL_CHECKS_PATH)
-  ? truncateWithNotice(readFileSafe(GEMINI_LOCAL_CHECKS_PATH), MAX_LOCAL_CHECKS_CHARS)
+  ? tailWithNotice(readFileSafe(GEMINI_LOCAL_CHECKS_PATH), MAX_LOCAL_CHECKS_CHARS)
   : "(missing)";
 const filteredLocalChecks = localChecks;
 const failedSignalSummary = `[Local Checks Summary]\n${filteredLocalChecks || "(none)"}\n\n[Test Output]\n${testOutput}`;
