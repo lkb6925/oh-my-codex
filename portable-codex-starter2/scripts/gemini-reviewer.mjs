@@ -10,6 +10,7 @@ const GEMINI_TIMEOUT_MS = Number(process.env.GEMINI_TIMEOUT_MS || "45000");
 const MAX_DIFF_CHARS = Number(process.env.GEMINI_MAX_DIFF_CHARS || "120000");
 const MAX_AGENTS_CHARS = Number(process.env.GEMINI_MAX_AGENTS_CHARS || "12000");
 const MAX_TEST_OUTPUT_CHARS = Number(process.env.GEMINI_MAX_TEST_OUTPUT_CHARS || "20000");
+const MAX_TEST_OUTPUT_TAIL_CHARS = Number(process.env.GEMINI_MAX_TEST_OUTPUT_TAIL_CHARS || "10000");
 const GEMINI_TEST_OUTPUT_PATH = process.env.GEMINI_TEST_OUTPUT_PATH || ".tmp-test-output.txt";
 const GEMINI_LOCAL_CHECKS_PATH = process.env.GEMINI_LOCAL_CHECKS_PATH || ".tmp-local-checks-round1.log";
 const MAX_LOCAL_CHECKS_CHARS = Number(process.env.GEMINI_MAX_LOCAL_CHECKS_CHARS || "12000");
@@ -55,6 +56,15 @@ function truncateWithNotice(value, maxChars) {
 
   const omitted = value.length - maxChars;
   return `${value.slice(0, maxChars)}\n\n...[truncated ${omitted} chars]`;
+}
+
+function tailWithNotice(value, maxChars) {
+  if (value.length <= maxChars) {
+    return value;
+  }
+
+  const omitted = value.length - maxChars;
+  return `...[truncated ${omitted} chars from start]\n\n${value.slice(-maxChars)}`;
 }
 
 function extractJsonCandidate(value) {
@@ -119,7 +129,10 @@ const agentsMd = fs.existsSync("AGENTS.md")
   ? truncateWithNotice(readFileSafe("AGENTS.md"), MAX_AGENTS_CHARS)
   : "";
 const testOutput = fs.existsSync(GEMINI_TEST_OUTPUT_PATH)
-  ? truncateWithNotice(readFileSafe(GEMINI_TEST_OUTPUT_PATH), MAX_TEST_OUTPUT_CHARS)
+  ? tailWithNotice(
+      truncateWithNotice(readFileSafe(GEMINI_TEST_OUTPUT_PATH), MAX_TEST_OUTPUT_CHARS),
+      MAX_TEST_OUTPUT_TAIL_CHARS,
+    )
   : "(missing)";
 const localChecks = fs.existsSync(GEMINI_LOCAL_CHECKS_PATH)
   ? truncateWithNotice(readFileSafe(GEMINI_LOCAL_CHECKS_PATH), MAX_LOCAL_CHECKS_CHARS)
