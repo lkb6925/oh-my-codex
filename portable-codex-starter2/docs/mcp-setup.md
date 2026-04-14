@@ -34,7 +34,7 @@ args = ["scripts/postgres-mcp.sh"]
 
 ## VM 실행 전 체크리스트
 
-1. `POSTGRES_READONLY_URL`을 VM secret/environment에 주입한다. (Git에 평문 저장 금지)
+1. `POSTGRES_MCP_DSN`을 VM secret/environment에 주입한다. (Git에 평문 저장 금지)
 2. 가능하면 `sslmode=require`를 사용한다.
 3. 권한 검증 SQL로 write/DDL 권한이 없는 계정인지 확인한다.
 4. `bash scripts/vm-ready-check.sh`로 VM 사전 점검을 통과한다.
@@ -43,12 +43,17 @@ args = ["scripts/postgres-mcp.sh"]
 ### 참고: 로컬 포장/배포 준비 중일 때
 
 - `GEMINI_API_KEY`를 이미 VM에서 주입할 예정이면, 로컬에서 preflight 실행 시 경고만 보고 넘어가도 된다.
-- DSN은 파일 치환 대신 `POSTGRES_READONLY_URL` 환경 변수로만 주입한다.
+- DSN은 파일 치환 대신 `POSTGRES_MCP_DSN` 환경 변수로만 주입한다.
 - 위 두 항목까지 실패로 강제하려면 아래처럼 strict 모드를 사용한다.
 
 ```bash
 VM_PREFLIGHT_STRICT=1 bash scripts/vm-ready-check.sh
 ```
+
+### 환경변수 지속성(.env)
+
+- `scripts/postgres-mcp.sh`, `scripts/vm-ready-check.sh`, `scripts/get-senior-review.sh`는 루트 `.env`가 있으면 자동 로드한다.
+- tmux/새 셸에서도 같은 값을 유지하려면 VM 프로젝트 루트 `.env`를 사용한다.
 
 ## Context7
 
@@ -80,8 +85,8 @@ node scripts/doctor.mjs --target /path/to/your-project
 
 - 연결 문자열은 프로젝트에 맞게 바꿔야 한다
 - 연결 문자열은 Git에 저장하지 말고 환경 변수로만 주입한다
-- 전용 read-only 계정을 써야 한다
-- read-only 접근을 우선한다
+- 스키마 조회 전용이면 read-only 계정을 우선한다
+- 마이그레이션 생성/검증이 필요하면 MCP DSN과 앱 실행 DSN을 분리해 관리한다
 
 ## 추천 설치 방식
 

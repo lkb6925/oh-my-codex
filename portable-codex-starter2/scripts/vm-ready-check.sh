@@ -4,6 +4,13 @@ set -Eeuo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
+if [[ -f ".env" ]]; then
+  # shellcheck disable=SC1091
+  set -a
+  source ".env"
+  set +a
+fi
+
 echo "[INFO] VM preflight started in ${ROOT_DIR}"
 
 require_cmd() {
@@ -30,7 +37,7 @@ else
     echo "[FAIL] GEMINI_API_KEY is missing (VM_PREFLIGHT_STRICT=1)"
     status=1
   else
-    echo "[WARN] GEMINI_API_KEY is missing in this shell. If the VM already injects it, you can ignore this warning."
+    echo "[WARN] GEMINI_API_KEY is missing in this shell. If VM runtime injects it, this warning is expected."
   fi
 fi
 
@@ -39,20 +46,20 @@ if grep -Eq "postgres(ql)?://" .codex/config.toml; then
     echo "[FAIL] Detected a hardcoded postgres URL in .codex/config.toml (VM_PREFLIGHT_STRICT=1)"
     status=1
   else
-    echo "[WARN] Detected a hardcoded postgres URL in .codex/config.toml. Move it to POSTGRES_READONLY_URL."
+    echo "[WARN] Detected a hardcoded postgres URL in .codex/config.toml. Move it to POSTGRES_MCP_DSN."
   fi
 else
   echo "[PASS] No hardcoded postgres URL found in .codex/config.toml"
 fi
 
-if [[ -n "${POSTGRES_READONLY_URL:-}" ]]; then
-  echo "[PASS] POSTGRES_READONLY_URL is set"
+if [[ -n "${POSTGRES_MCP_DSN:-}" || -n "${POSTGRES_READONLY_URL:-}" ]]; then
+  echo "[PASS] POSTGRES_MCP_DSN (or legacy POSTGRES_READONLY_URL) is set"
 else
   if [[ "${strict_preflight}" == "1" ]]; then
-    echo "[FAIL] POSTGRES_READONLY_URL is missing (VM_PREFLIGHT_STRICT=1)"
+    echo "[FAIL] POSTGRES_MCP_DSN is missing (VM_PREFLIGHT_STRICT=1)"
     status=1
   else
-    echo "[WARN] POSTGRES_READONLY_URL is missing in this shell. If VM injects it at runtime, you can ignore this warning."
+    echo "[WARN] POSTGRES_MCP_DSN is missing in this shell. If VM injects it at runtime, you can ignore this warning."
   fi
 fi
 

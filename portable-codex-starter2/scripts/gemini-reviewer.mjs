@@ -5,11 +5,16 @@ import fs from "node:fs";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-pro";
-const GEMINI_DIFF_BASE = process.env.GEMINI_DIFF_BASE || "HEAD";
+const GEMINI_DIFF_MODE = process.env.GEMINI_DIFF_MODE || "--cached";
+const GEMINI_DIFF_BASE = process.env.GEMINI_DIFF_BASE || "HEAD~1";
 const GEMINI_TIMEOUT_MS = Number(process.env.GEMINI_TIMEOUT_MS || "45000");
 const MAX_DIFF_CHARS = Number(process.env.GEMINI_MAX_DIFF_CHARS || "120000");
 const MAX_FILE_CHARS = Number(process.env.GEMINI_MAX_FILE_CHARS || "20000");
 const MAX_AGENTS_CHARS = Number(process.env.GEMINI_MAX_AGENTS_CHARS || "12000");
+const MAX_TEST_OUTPUT_CHARS = Number(process.env.GEMINI_MAX_TEST_OUTPUT_CHARS || "20000");
+const GEMINI_TEST_OUTPUT_PATH = process.env.GEMINI_TEST_OUTPUT_PATH || ".tmp-test-output.txt";
+const GEMINI_LOCAL_CHECKS_PATH = process.env.GEMINI_LOCAL_CHECKS_PATH || ".tmp-local-checks-round1.log";
+const MAX_LOCAL_CHECKS_CHARS = Number(process.env.GEMINI_MAX_LOCAL_CHECKS_CHARS || "12000");
 
 if (!GEMINI_API_KEY) {
   console.error("GEMINI_API_KEY is not set. Please export it.");
@@ -30,7 +35,10 @@ function sh(cmd) {
 }
 
 function getChangedFiles() {
-  const out = sh(`git diff --name-only ${GEMINI_DIFF_BASE}`);
+  const out =
+    GEMINI_DIFF_MODE === "--cached"
+      ? sh("git diff --cached --name-only")
+      : sh(`git diff --name-only ${GEMINI_DIFF_BASE}`);
   return out ? out.split("\n").filter(Boolean) : [];
 }
 
@@ -81,7 +89,8 @@ function validateResultShape(parsed) {
   return true;
 }
 
-const diff = sh(`git diff ${GEMINI_DIFF_BASE}`);
+const diff =
+  GEMINI_DIFF_MODE === "--cached" ? sh("git diff --cached") : sh(`git diff ${GEMINI_DIFF_BASE}`);
 const changedFiles = getChangedFiles();
 
 if (!diff.trim()) {
@@ -97,6 +106,12 @@ const fileContents = changedFiles.map((file) => ({
 const agentsMd = fs.existsSync("AGENTS.md")
   ? truncateWithNotice(readFileSafe("AGENTS.md"), MAX_AGENTS_CHARS)
   : "";
+const testOutput = fs.existsSync(GEMINI_TEST_OUTPUT_PATH)
+  ? truncateWithNotice(readFileSafe(GEMINI_TEST_OUTPUT_PATH), MAX_TEST_OUTPUT_CHARS)
+  : "(missing)";
+const localChecks = fs.existsSync(GEMINI_LOCAL_CHECKS_PATH)
+  ? truncateWithNotice(readFileSafe(GEMINI_LOCAL_CHECKS_PATH), MAX_LOCAL_CHECKS_CHARS)
+  : "(missing)";
 
 const systemPrompt = `
 You are a brutally strict senior software architect with 15 years of experience reviewing production systems.
@@ -113,6 +128,8 @@ Rules:
 - Be specific and harsh, but technically correct.
 - Return ONLY valid JSON.
 - If no meaningful issues exist, return {"verdict":"pass","issues":[]}
+- DO NOT provide full replacement code.
+- Provide only minimal fix direction.
 
 JSON format:
 {
@@ -138,6 +155,12 @@ ${JSON.stringify(fileContents, null, 2)}
 
 # Diff
 ${truncateWithNotice(diff, MAX_DIFF_CHARS)}
+
+# Test output
+${testOutput}
+
+# Local checks output
+${localChecks}
 `;
 
 const body = {

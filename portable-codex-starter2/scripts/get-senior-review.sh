@@ -2,6 +2,28 @@
 set -Eeuo pipefail
 
 strict_checks="${STRICT_LOCAL_CHECKS:-0}"
+round="${SENIOR_REVIEW_ROUND:-1}"
+test_output_file=".tmp-test-output-round${round}.txt"
+local_checks_log=".tmp-local-checks-round${round}.log"
+review_output_file=".tmp-gemini-review-round${round}.json"
+
+if [[ -f ".env" ]]; then
+  # shellcheck disable=SC1091
+  set -a
+  source ".env"
+  set +a
+fi
+
+export GEMINI_TEST_OUTPUT_PATH="${test_output_file}"
+export GEMINI_LOCAL_CHECKS_PATH="${local_checks_log}"
+
+if [[ ! "${round}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "[ERROR] SENIOR_REVIEW_ROUND must be a positive integer."
+  exit 1
+fi
+
+: > "${local_checks_log}"
+: > "${test_output_file}"
 
 has_npm_script() {
   local script_name="$1"
@@ -18,14 +40,19 @@ has_npm_script() {
 
 run_npm_check() {
   local script_name="$1"
+  local output_file="$2"
 
   if ! has_npm_script "$script_name"; then
     echo "[SKIP] ${script_name} (package.json script not found)"
+    {
+      echo "=== ${script_name} ==="
+      echo "[SKIP] package.json script not found"
+    } >> "${output_file}"
     return 2
   fi
 
   echo "[INFO] Running ${script_name}..."
-  if npm run "$script_name"; then
+  if npm run "$script_name" >> "${output_file}" 2>&1; then
     echo "[PASS] ${script_name}"
     return 0
   fi
@@ -36,7 +63,7 @@ run_npm_check() {
 
 echo "[INFO] Running local checks..."
 lint_state="skip"
-if run_npm_check "lint"; then
+if run_npm_check "lint" "${local_checks_log}"; then
   lint_state="pass"
 else
   case $? in
@@ -46,7 +73,7 @@ else
 fi
 
 typecheck_state="skip"
-if run_npm_check "typecheck"; then
+if run_npm_check "typecheck" "${local_checks_log}"; then
   typecheck_state="pass"
 else
   case $? in
@@ -56,7 +83,7 @@ else
 fi
 
 test_state="skip"
-if run_npm_check "test"; then
+if run_npm_check "test" "${test_output_file}"; then
   test_state="pass"
 else
   case $? in
@@ -64,6 +91,13 @@ else
     2) test_state="skip" ;;
   esac
 fi
+
+{
+  echo "=== summary ==="
+  echo "lint=${lint_state}"
+  echo "typecheck=${typecheck_state}"
+  echo "test=${test_state}"
+} >> "${local_checks_log}"
 
 echo "[INFO] Local checks summary: lint=${lint_state} typecheck=${typecheck_state} test=${test_state}"
 
@@ -79,9 +113,16 @@ if [[ "${strict_checks}" == "1" ]] && [[ "${typecheck_state}" == "skip" || "${te
 fi
 
 echo "[INFO] Requesting Gemini Senior Architect review..."
-tmp_output=".tmp-gemini-review.json.tmp"
+tmp_output="${review_output_file}.tmp"
 node scripts/gemini-reviewer.mjs > "${tmp_output}"
-mv "${tmp_output}" .tmp-gemini-review.json
+mv "${tmp_output}" "${review_output_file}"
+cp "${review_output_file}" .tmp-gemini-review.json
 
-echo "[INFO] Review complete. Results saved to .tmp-gemini-review.json"
-cat .tmp-gemini-review.json
+echo "[INFO] Review complete. Results saved to ${review_output_file}"
+cat "${review_output_file}"
+
+if [[ "${round}" == "2" ]]; then
+  node scripts/review-gate.mjs --file "${review_output_file}" --final
+else
+  node scripts/review-gate.mjs --file "${review_output_file}"
+fi

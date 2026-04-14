@@ -15,5 +15,5 @@ args = ["-y", "@upstash/context7-mcp"]
 
 [mcp_servers.postgres]
 command = "bash"
-# Inject DSN via POSTGRES_READONLY_URL. Never commit real credentials.
+# Inject DSN via POSTGRES_MCP_DSN. Never commit real credentials.
 args = ["scripts/postgres-mcp.sh"]

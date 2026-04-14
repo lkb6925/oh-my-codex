@@ -56,7 +56,7 @@ If the user asks a pure explanation question and explicitly says not to change a
 5. For library or API uncertainty, check internal documentation tools first, especially `context7` when available in the session.
 6. Use internet search only as a last resort. When you do search, include the exact error keywords and the relevant library version so one search can be high-signal.
 7. Implement the smallest change that gets the target behavior working.
-8. After implementing a feature and BEFORE creating any git checkpoint or commit, you MUST run the `senior-review` skill. Fix the code yourself based on the skill's instructions. Do not skip this protocol.
+8. After implementing a feature and BEFORE creating any git checkpoint or commit, you MUST run the `senior-review` skill. You MUST NOT create any git commit before completing the senior-review protocol. This is a hard requirement.
 9. After the senior-review protocol is complete (maximum 2 rounds), write a durable checkpoint under `.omx/checkpoints/` when available, or create an equivalent git commit before the next risky step.
 10. Verify with the strongest practical evidence for the current session.
 11. If blocked, try a materially different approach before escalating.

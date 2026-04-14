@@ -128,14 +128,14 @@ if (configUsesPostgres) {
     optional: true,
     detail: postgresUsesEnvLauncher
       ? "scripts/postgres-mcp.sh"
-      : "prefer bash launcher + POSTGRES_READONLY_URL to avoid committed credentials",
+      : "prefer bash launcher + POSTGRES_MCP_DSN to avoid committed credentials",
   });
   checks.push({
     name: "postgres DSN not hardcoded in config",
     ok: !postgresHasHardcodedUrl,
     optional: true,
     detail: postgresHasHardcodedUrl
-      ? "remove plaintext DSN and inject POSTGRES_READONLY_URL via environment"
+      ? "remove plaintext DSN and inject POSTGRES_MCP_DSN via environment"
       : "no DSN literal found",
   });
 }
