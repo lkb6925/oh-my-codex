@@ -32,6 +32,7 @@ await copyInto(join(packRoot, "scripts", "factory-night.sh"), join(target, "scri
 await copyInto(join(packRoot, "scripts", "factory-status.sh"), join(target, "scripts", "factory-status.sh"));
 await copyInto(join(packRoot, "scripts", "factory-watch.sh"), join(target, "scripts", "factory-watch.sh"));
 await copyInto(join(packRoot, "scripts", "factory-summary.sh"), join(target, "scripts", "factory-summary.sh"));
+await copyInto(join(packRoot, "scripts", "factory-finish.sh"), join(target, "scripts", "factory-finish.sh"));
 await copyInto(join(packRoot, "scripts", "lib", "load-env.sh"), join(target, "scripts", "lib", "load-env.sh"));
 await copyInto(join(packRoot, "scripts", "lib", "cli-utils.mjs"), join(target, "scripts", "lib", "cli-utils.mjs"));
 

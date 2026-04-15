@@ -46,6 +46,7 @@ if [[ -n "${OMX_ARGS}" ]]; then
   OMX_TOKENS=("${OMX_BIN}" "${OMX_ARG_TOKENS[@]}")
   OMX_INPUT_MODE="omx_args"
 else
+  echo "[WARN] OMX_COMMAND is deprecated. Prefer OMX_BIN + OMX_ARGS for structured launch input."
   read -r -a OMX_TOKENS <<< "${OMX_COMMAND}"
 fi
 
@@ -127,6 +128,9 @@ cat > "${META_FILE}" <<JSON
   "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "repo_path": "${ROOT_DIR}",
   "branch": "$(git branch --show-current 2>/dev/null || echo unknown)",
+  "status": "running",
+  "phase": "launched",
+  "finished_at": null,
   "session_name": "${SESSION_NAME}",
   "run_log": "${RUN_LOG}",
   "omx_input_mode": "${OMX_INPUT_MODE}",

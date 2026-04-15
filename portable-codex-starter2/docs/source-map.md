@@ -27,6 +27,7 @@
 - `scripts/factory-status.sh`
 - `scripts/factory-watch.sh`
 - `scripts/factory-summary.sh`
+- `scripts/factory-finish.sh`
 
 ## 뺀 것
 

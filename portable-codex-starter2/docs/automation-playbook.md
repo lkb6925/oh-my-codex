@@ -15,6 +15,7 @@
 - `scripts/factory-status.sh`: 상태 확인(사람/기계 겸용, `--json` 지원)
 - `scripts/factory-watch.sh`: 읽기 전용 감시/알림
 - `scripts/factory-summary.sh`: 아침 점검용 요약 리포트
+- `scripts/factory-finish.sh`: 최종 push/요약/종료 준비 상태 계산
 - `scripts/run-local-checks.sh`: local verification 전용 분리 계층
 
 ## 권장 설치
@@ -76,6 +77,9 @@ bash scripts/factory-watch.sh
 
 # 요약
 bash scripts/factory-summary.sh
+
+# 마감 처리 (push + final summary + poweroff 준비 계산)
+bash scripts/factory-finish.sh
 ```
 
 ## 상태 JSON 스키마 (Hermes용)
@@ -95,6 +99,11 @@ bash scripts/factory-summary.sh
 - `meta_file`
 - `meta_age_seconds`
 - `omx_status`
+- `push_state`
+- `last_review_verdict`
+- `last_alert_file`
+- `poweroff_ready`
+- `remaining_manual_actions`
 
 타입 규칙:
 - `session_exists`: boolean

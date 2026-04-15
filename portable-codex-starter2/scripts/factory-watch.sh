@@ -76,6 +76,8 @@ trap request_stop INT TERM
 write_alert_snapshot() {
   local status_json="$1"
   local reason_text="$2"
+  local severity="$3"
+  local suggested_action="$4"
   local timestamp
   timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
@@ -85,7 +87,9 @@ write_alert_snapshot() {
       const outputPath = process.argv[1];
       const cycle = Number(process.argv[2]);
       const reason = process.argv[3];
-      const timestamp = process.argv[4];
+      const severity = process.argv[4];
+      const suggestedAction = process.argv[5];
+      const timestamp = process.argv[6];
       let status = {};
       try {
         status = JSON.parse(fs.readFileSync(0, "utf8"));
@@ -97,6 +101,8 @@ write_alert_snapshot() {
         generated_at: timestamp,
         cycle,
         reason,
+        severity,
+        suggested_action: suggestedAction,
         run_state: status.run_state ?? null,
         session_exists: status.session_exists ?? null,
         latest_log: status.latest_log ?? null,
@@ -105,7 +111,7 @@ write_alert_snapshot() {
         omx_status: status.omx_status ?? null
       };
       fs.writeFileSync(outputPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
-    ' "${ALERT_SNAPSHOT_FILE}" "${cycle_count}" "${reason_text}" "${timestamp}" <<< "${status_json}"
+    ' "${ALERT_SNAPSHOT_FILE}" "${cycle_count}" "${reason_text}" "${severity}" "${suggested_action}" "${timestamp}" <<< "${status_json}"
     return 0
   fi
 
@@ -113,6 +119,8 @@ write_alert_snapshot() {
     jq -n \
       --arg generated_at "${timestamp}" \
       --arg reason "${reason_text}" \
+      --arg severity "${severity}" \
+      --arg suggested_action "${suggested_action}" \
       --argjson cycle "${cycle_count}" \
       --argjson status "${status_json}" \
       '{
@@ -120,6 +128,8 @@ write_alert_snapshot() {
         generated_at: $generated_at,
         cycle: $cycle,
         reason: $reason,
+        severity: $severity,
+        suggested_action: $suggested_action,
         run_state: $status.run_state,
         session_exists: $status.session_exists,
         latest_log: $status.latest_log,
@@ -208,9 +218,25 @@ while true; do
   fi
 
   if (( alert == 1 )); then
+    severity="medium"
+    suggested_action="inspect_factory_status"
+    if [[ "${reason[*]}" == *"tmux session missing"* ]]; then
+      severity="high"
+      suggested_action="restart_factory_night_session"
+    elif [[ "${reason[*]}" == *"omx status unavailable"* ]]; then
+      severity="high"
+      suggested_action="verify_omx_runtime_and_credentials"
+    elif [[ "${reason[*]}" == *"run log stale"* || "${reason[*]}" == *"run metadata stale"* ]]; then
+      severity="medium"
+      suggested_action="check_run_log_and_consider_restart"
+    elif [[ "${reason[*]}" == *"suspected_loop"* ]]; then
+      severity="medium"
+      suggested_action="inspect_review_artifacts_and_adjust_workflow"
+    fi
+
     ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    echo "[WARN] ${ts} :: ${reason[*]}" | tee -a "${WATCH_LOG}"
-    write_alert_snapshot "${status_json}" "${reason[*]}"
+    echo "[WARN] ${ts} :: ${reason[*]} (severity=${severity})" | tee -a "${WATCH_LOG}"
+    write_alert_snapshot "${status_json}" "${reason[*]}" "${severity}" "${suggested_action}"
     bash scripts/factory-status.sh | tee -a "${WATCH_LOG}"
   fi
 

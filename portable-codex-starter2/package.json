@@ -11,6 +11,7 @@
     "factory:night": "bash scripts/factory-night.sh",
     "factory:status": "bash scripts/factory-status.sh",
     "factory:watch": "bash scripts/factory-watch.sh",
-    "factory:summary": "bash scripts/factory-summary.sh"
+    "factory:summary": "bash scripts/factory-summary.sh",
+    "factory:finish": "bash scripts/factory-finish.sh"
   }
 }
