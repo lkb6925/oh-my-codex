@@ -1,0 +1,14 @@
+.env
+.env.local
+.tmp-gemini-review.json
+.tmp-gemini-review-round*.json
+.tmp-gemini-review-round*.json.tmp
+.tmp-local-checks-round*.log
+.tmp-local-checks-round*.summary.json
+.tmp-test-output-round*.txt
+.harness.lock
+.harness.lock.d
+.omx/runs/run-*.log
+.omx/runs/watch-*.log
+.omx/runs/latest-run.json
+.omx/runs/launch-*.sh

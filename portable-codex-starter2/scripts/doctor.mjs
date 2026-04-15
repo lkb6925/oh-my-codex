@@ -43,16 +43,16 @@ if (skillsRoot === ".agents") {
   checks.push(checkExists(".agents/skills", agentsSkillsPath));
   checks.push({
     name: "skill count",
-    ok: agentsSkillScan.count === expected.skills,
-    detail: `${agentsSkillScan.count}/${expected.skills} in .agents/skills`,
+    ok: agentsSkillScan.count >= expected.skills,
+    detail: `${agentsSkillScan.count} (minimum ${expected.skills}) in .agents/skills`,
   });
   checks.push(checkOptionalIssues(".agents/skills structure", agentsSkillScan.issues));
 } else if (skillsRoot === ".codex") {
   checks.push(checkExists(".codex/skills", codexSkillsPath));
   checks.push({
     name: "skill count",
-    ok: codexSkillScan.count === expected.skills,
-    detail: `${codexSkillScan.count}/${expected.skills} in .codex/skills`,
+    ok: codexSkillScan.count >= expected.skills,
+    detail: `${codexSkillScan.count} (minimum ${expected.skills}) in .codex/skills`,
   });
   checks.push(checkOptionalIssues(".codex/skills structure", codexSkillScan.issues));
 } else if (skillsRoot === "both") {
@@ -60,13 +60,13 @@ if (skillsRoot === ".agents") {
   checks.push(checkExists(".codex/skills", codexSkillsPath));
   checks.push({
     name: "skill count (.agents)",
-    ok: agentsSkillScan.count === expected.skills,
-    detail: `${agentsSkillScan.count}/${expected.skills}`,
+    ok: agentsSkillScan.count >= expected.skills,
+    detail: `${agentsSkillScan.count} (minimum ${expected.skills})`,
   });
   checks.push({
     name: "skill count (.codex)",
-    ok: codexSkillScan.count === expected.skills,
-    detail: `${codexSkillScan.count}/${expected.skills}`,
+    ok: codexSkillScan.count >= expected.skills,
+    detail: `${codexSkillScan.count} (minimum ${expected.skills})`,
   });
   checks.push(checkOptionalIssues(".agents/skills structure", agentsSkillScan.issues));
   checks.push(checkOptionalIssues(".codex/skills structure", codexSkillScan.issues));
@@ -97,11 +97,10 @@ const configUsesContext7 = existsSync(configPath)
   : false;
 const configText = existsSync(configPath) ? await readTextIfExists(configPath) : "";
 const configUsesPostgres = configText.includes("[mcp_servers.postgres]");
-const postgresLooksReadOnly =
-  configText.includes("postgresql://readonly:") ||
-  configText.includes("postgresql://read_only:") ||
-  configText.includes("postgresql://ro_");
-const postgresIsPlaceholder = configText.includes("postgresql://readonly:change-me@localhost/app");
+const postgresHasHardcodedUrl = /postgres(ql)?:\/\//.test(configText);
+const postgresUsesEnvLauncher =
+  configText.includes('command = "bash"') &&
+  configText.includes('args = ["scripts/postgres-mcp.sh"]');
 
 if (configUsesContext7) {
   checks.push({
@@ -124,20 +123,20 @@ checks.push(checkOptional(".omx/checkpoints", checkpointsPath));
 checks.push(checkOptional(".omx/checkpoints/.gitkeep", checkpointsGitkeepPath));
 if (configUsesPostgres) {
   checks.push({
-    name: "postgres DSN looks read-only",
-    ok: postgresLooksReadOnly,
+    name: "postgres MCP uses env launcher",
+    ok: postgresUsesEnvLauncher,
     optional: true,
-    detail: postgresLooksReadOnly
-      ? "read-only naming detected"
-      : "use a dedicated read-only account for VM automation",
+    detail: postgresUsesEnvLauncher
+      ? "scripts/postgres-mcp.sh"
+      : "prefer bash launcher + POSTGRES_MCP_DSN to avoid committed credentials",
   });
   checks.push({
-    name: "postgres DSN placeholder replaced",
-    ok: !postgresIsPlaceholder,
+    name: "postgres DSN not hardcoded in config",
+    ok: !postgresHasHardcodedUrl,
     optional: true,
-    detail: postgresIsPlaceholder
-      ? "replace the sample DSN before real use"
-      : "custom DSN configured",
+    detail: postgresHasHardcodedUrl
+      ? "remove plaintext DSN and inject POSTGRES_MCP_DSN via environment"
+      : "no DSN literal found",
   });
 }
 

@@ -14,6 +14,6 @@ command = "npx"
 args = ["-y", "@upstash/context7-mcp"]
 
 [mcp_servers.postgres]
-command = "npx"
-# Use a dedicated read-only account. Replace this placeholder before real use.
-args = ["-y", "@modelcontextprotocol/server-postgres", "postgresql://readonly:change-me@localhost/app"]
+command = "bash"
+# Inject DSN via POSTGRES_MCP_DSN. Never commit real credentials.
+args = ["scripts/postgres-mcp.sh"]

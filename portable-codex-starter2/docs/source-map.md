@@ -21,6 +21,12 @@
   필요할 때만 쓰는 보조 계층으로 유지
 - `scripts/install.mjs`
 - `scripts/doctor.mjs`
+- `scripts/lib/load-env.sh`
+- `scripts/run-local-checks.sh`
+- `scripts/factory-night.sh`
+- `scripts/factory-status.sh`
+- `scripts/factory-watch.sh`
+- `scripts/factory-summary.sh`
 
 ## 뺀 것
 
@@ -46,3 +52,4 @@
 - 필요한 행동 강령과 최소 MCP만 덧씌운다.
 - runtime에 꼭 필요한 파일만 남긴다.
 - 복붙 후 바로 쓰기 쉬운 쪽을 우선한다.
+- Hermes는 운영자 인터페이스를 소비하고, 실행은 Codex/OMX가 담당한다.

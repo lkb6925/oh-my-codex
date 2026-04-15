@@ -8,6 +8,7 @@
 - `context7`와 `postgres`만 기본 MCP로 둔다.
 - `postgres`는 read-only 계정 기준으로만 사용한다.
 - VM에서 밤새 돌아가도 기존 런타임을 방해하지 않게 유지한다.
+- Hermes 없이도 단독으로 돌아가는 야간 공장 하네스를 제공한다.
 
 ## 핵심만
 
@@ -25,6 +26,13 @@
 - GitHub/Copilot instruction/hook/workflow 계층
 - 야간 공장형 자동화
 - OMX runtime 대체물
+
+## 역할 분리 (중요)
+
+- **Codex CLI**: 실제 코드 작성/수정 실행자
+- **OMX**: 장기 실행 런타임/워크플로우 계층
+- **Gemini reviewer**: 커밋 전 적대적 리뷰어
+- **Hermes**: 상태/감시 스크립트를 읽는 외부 운영자(필수 아님)
 
 ## 가장 빠른 시작
 
@@ -102,6 +110,34 @@ node scripts/doctor.mjs --target /path/to/your-project --skills-root=.codex
 3. `doctor`로 확인한다.
 4. OMX/Hermes가 밤새 이어받기 좋은 커밋 단위로 작업한다.
 5. 작업이 끝나면 반드시 commit/push 한다.
+
+## 야간 실행 빠른 시작
+
+```bash
+npm run vm:preflight
+npm run factory:night
+npm run factory:status
+```
+
+기본적으로 `factory:night`는 `FACTORY_COMMAND_POLICY=strict`로 실행되어 `OMX_COMMAND`를 보수적으로 검증한다. bare `omx`는 자동으로 `--tmux --madmax --high`를 붙여 실행하며, 위험 플래그 패턴은 차단된다.
+
+감시(읽기 전용):
+
+```bash
+npm run factory:watch
+# 1회 체크만 하고 종료
+bash scripts/factory-watch.sh --once
+# 최대 10회 체크 후 종료
+WATCH_MAX_CYCLES=10 bash scripts/factory-watch.sh
+```
+
+`factory-watch`는 `jq`를 우선 사용하고, `jq`가 없으면 `node` 파서로 fallback한다.
+
+아침 요약:
+
+```bash
+npm run factory:summary
+```
 
 ## 현재 기준 검증 포인트
 
