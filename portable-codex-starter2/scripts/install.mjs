@@ -1,4 +1,4 @@
-import { cp, mkdir, stat } from "node:fs/promises";
+import { chmod, cp, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "./lib/cli-utils.mjs";
@@ -19,6 +19,21 @@ await copyTree(join(packRoot, ".codex", "agents"), join(target, ".codex", "agent
 await copyTree(join(packRoot, ".omx"), join(target, ".omx"));
 await copyInto(join(packRoot, "README.md"), join(target, ".codex", "starter-docs", "README.md"));
 await copyTree(join(packRoot, "docs"), join(target, ".codex", "starter-docs", "docs"));
+await mergeGitignore(join(packRoot, ".gitignore"), join(target, ".gitignore"));
+await copyInto(join(packRoot, "scripts", "doctor.mjs"), join(target, "scripts", "doctor.mjs"));
+await copyInto(join(packRoot, "scripts", "install.mjs"), join(target, "scripts", "install.mjs"));
+await copyInto(join(packRoot, "scripts", "gemini-reviewer.mjs"), join(target, "scripts", "gemini-reviewer.mjs"));
+await copyInto(join(packRoot, "scripts", "get-senior-review.sh"), join(target, "scripts", "get-senior-review.sh"));
+await copyInto(join(packRoot, "scripts", "run-local-checks.sh"), join(target, "scripts", "run-local-checks.sh"));
+await copyInto(join(packRoot, "scripts", "review-gate.mjs"), join(target, "scripts", "review-gate.mjs"));
+await copyInto(join(packRoot, "scripts", "vm-ready-check.sh"), join(target, "scripts", "vm-ready-check.sh"));
+await copyInto(join(packRoot, "scripts", "postgres-mcp.sh"), join(target, "scripts", "postgres-mcp.sh"));
+await copyInto(join(packRoot, "scripts", "factory-night.sh"), join(target, "scripts", "factory-night.sh"));
+await copyInto(join(packRoot, "scripts", "factory-status.sh"), join(target, "scripts", "factory-status.sh"));
+await copyInto(join(packRoot, "scripts", "factory-watch.sh"), join(target, "scripts", "factory-watch.sh"));
+await copyInto(join(packRoot, "scripts", "factory-summary.sh"), join(target, "scripts", "factory-summary.sh"));
+await copyInto(join(packRoot, "scripts", "lib", "load-env.sh"), join(target, "scripts", "lib", "load-env.sh"));
+await copyInto(join(packRoot, "scripts", "lib", "cli-utils.mjs"), join(target, "scripts", "lib", "cli-utils.mjs"));
 
 if (skillsRoot === ".agents" || skillsRoot === "both") {
   await copyTree(join(packRoot, ".agents", "skills"), join(target, ".agents", "skills"));
@@ -61,6 +76,7 @@ async function ensureDir(path) {
 async function copyInto(source, destination) {
   await mkdir(dirname(destination), { recursive: true });
   await cp(source, destination, { force: true });
+  await preserveExecutableBit(source, destination);
 }
 
 async function copyTree(source, destination) {
@@ -75,4 +91,60 @@ async function copyTree(source, destination) {
   }
   await mkdir(dirname(destination), { recursive: true });
   await cp(source, destination, { recursive: true, force: true });
+}
+
+async function mergeGitignore(source, destination) {
+  let sourceText = "";
+  try {
+    sourceText = await readFile(source, "utf8");
+  } catch {
+    return;
+  }
+
+  const sourceLines = sourceText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  let destinationText = "";
+  try {
+    destinationText = await readFile(destination, "utf8");
+  } catch {
+    destinationText = "";
+  }
+
+  const destinationLines = new Set(
+    destinationText
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0),
+  );
+
+  const missingLines = sourceLines.filter((line) => !destinationLines.has(line));
+  if (missingLines.length === 0) {
+    return;
+  }
+
+  const separator = destinationText.length > 0 && !destinationText.endsWith("\n") ? "\n" : "";
+  const prefix = destinationText.length > 0 ? "\n# portable-codex-starter2\n" : "";
+  const merged = `${destinationText}${separator}${prefix}${missingLines.join("\n")}\n`;
+  await mkdir(dirname(destination), { recursive: true });
+  await writeFile(destination, merged, "utf8");
+}
+
+async function preserveExecutableBit(source, destination) {
+  let sourceInfo;
+  try {
+    sourceInfo = await stat(source);
+  } catch {
+    return;
+  }
+
+  const executableBits = sourceInfo.mode & 0o111;
+  if (executableBits === 0) {
+    return;
+  }
+
+  const targetMode = sourceInfo.mode & 0o777;
+  await chmod(destination, targetMode);
 }

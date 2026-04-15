@@ -9,6 +9,14 @@
 - 최소 규칙만 추가한다
 - handoff와 복구를 쉽게 만든다
 
+## 운영 레이어 (overnight harness)
+
+- `scripts/factory-night.sh`: 야간 실행 엔트리포인트 (tmux + OMX)
+- `scripts/factory-status.sh`: 상태 확인(사람/기계 겸용, `--json` 지원)
+- `scripts/factory-watch.sh`: 읽기 전용 감시/알림
+- `scripts/factory-summary.sh`: 아침 점검용 요약 리포트
+- `scripts/run-local-checks.sh`: local verification 전용 분리 계층
+
 ## 권장 설치
 
 기본 권장:
@@ -36,6 +44,7 @@ node scripts/install.mjs --target /path/to/your-project --with-config --core-onl
 - 프레임워크 문서는 `context7`를 먼저 쓴다
 - DB 스키마는 read-only `postgres`로 먼저 확인한다
 - 의미 있는 마일스톤마다 git commit 또는 체크포인트를 남긴다
+- Hermes는 감독자이며, 코드 실행자는 Codex CLI다
 
 ## 하지 않는 일
 
@@ -51,3 +60,60 @@ node scripts/install.mjs --target /path/to/your-project --with-config --core-onl
 - 아침에 이어받을 수 있도록 중간 상태를 재현 가능하게 남긴다
 - DB 관련 작업은 실제 스키마와 코드 가정의 차이를 명시한다
 - `postgres` DSN은 실사용 전에 반드시 read-only 계정으로 교체한다
+
+## 기본 명령
+
+```bash
+# 야간 실행 시작 (idempotent)
+bash scripts/factory-night.sh
+
+# 상태 확인
+bash scripts/factory-status.sh
+bash scripts/factory-status.sh --json
+
+# 감시 (읽기 전용)
+bash scripts/factory-watch.sh
+
+# 요약
+bash scripts/factory-summary.sh
+```
+
+## 상태 JSON 스키마 (Hermes용)
+
+`bash scripts/factory-status.sh --json`은 안정된 키를 제공한다.
+
+- `schema_version`
+- `generated_at`
+- `run_state` (`running` | `idle`)
+- `session_name`
+- `session_exists`
+- `branch`
+- `dirty`
+- `latest_commit`
+- `latest_log`
+- `log_age_seconds`
+- `meta_file`
+- `meta_age_seconds`
+- `omx_status`
+
+타입 규칙:
+- `session_exists`: boolean
+- `dirty`: boolean (`true` = 변경사항 존재)
+- `log_age_seconds`: number | null
+- `meta_age_seconds`: number | null
+
+## 운영 주의
+
+- `run-local-checks.sh`는 `.harness.lock`(또는 `.harness.lock.d`)로 동시 실행을 차단한다.
+- 기본 lock 모드는 `HARNESS_LOCK_MODE=mkdir`이며 NFS 친화적인 디렉터리 lock을 우선 사용한다. (`auto`/`flock`도 선택 가능)
+- `factory-watch.sh`는 `jq`를 우선 사용하고, 없으면 `node` JSON 파서 fallback을 사용한다.
+- `factory-watch.sh --once`로 1회 체크 후 종료할 수 있다.
+- `WATCH_MAX_CYCLES=<n>`을 주면 무한 루프 대신 n회 체크 후 종료한다.
+- `.env` 로딩은 기본적으로 기존 shell env를 보존한다. 필요한 경우에만 `CODEX_ENV_OVERRIDE=1`로 덮어쓴다.
+- `factory-night.sh`는 기본 `strict` 정책에서 `OMX_COMMAND`를 보수적으로 검증한다.
+  - `omx` 단독 입력은 자동으로 `--tmux --madmax --high`가 붙는다.
+  - `--no-tmux`는 차단되고, `--tmux` 누락 시 자동 추가된다.
+  - `--unsafe`, `--danger`, `--destructive`, `--no-sandbox` 패턴은 차단된다.
+  - 비-`omx` 명령을 의도적으로 허용하려면 `FACTORY_ALLOW_NON_OMX_COMMAND=1`을 설정한다.
+  - 정책을 완화하려면 `FACTORY_COMMAND_POLICY=permissive`를 명시한다.
+- 런 로그(`run-*.log`), 감시 로그(`watch-*.log`), launch 스크립트(`launch-*.sh`)는 7일 초과 시 정리된다.
