@@ -235,11 +235,6 @@ if [[ "${strict_checks}" == "1" ]] && [[ "${lint_state}" == "fail" || "${typeche
   exit 1
 fi
 
-if [[ "${strict_checks}" == "1" ]] && [[ "${typecheck_state}" == "fail" ]]; then
-  echo "[ERROR] typecheck failed. Fix type errors before senior review."
-  exit 1
-fi
-
 if [[ "${strict_checks}" == "1" ]] && [[ "${test_state}" != "pass" && "${build_state}" != "pass" ]]; then
   echo "[ERROR] STRICT_LOCAL_CHECKS=1 requires at least one strong runtime signal: pass \"test\" or pass \"build\"."
   exit 1

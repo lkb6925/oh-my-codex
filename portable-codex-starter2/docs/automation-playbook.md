@@ -92,7 +92,7 @@ bash scripts/factory-self-check.sh
 
 - `schema_version`
 - `generated_at`
-- `run_state` (`running` | `idle`)
+- `run_state` (`running` | `idle` | `stalled` | `completed` | `failed`)
 - `session_name`
 - `session_exists`
 - `branch`

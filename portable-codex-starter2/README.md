@@ -19,13 +19,10 @@
 - `.devcontainer/`는 필요할 때만 쓰는 보조 파일
 - `.codex/config.toml`로 MCP 기본값 제공
 
-넣지 않은 것:
+기본 철학:
 
-- Gemini checker 루프
-- pre-push gate
-- GitHub/Copilot instruction/hook/workflow 계층
-- 야간 공장형 자동화
-- OMX runtime 대체물
+- 하네스는 추가하되 기존 OMX/Hermes/Codex 런타임을 대체하지 않는다.
+- cloud hook/workflow 계층은 넣지 않고 VM 로컬 운영 스크립트에 집중한다.
 
 ## 역할 분리 (중요)
 
@@ -96,12 +93,11 @@ node scripts/doctor.mjs --target /path/to/your-project --skills-root=.codex
 
 ## 이 starter가 맡지 않는 범위
 
-- 푸시 차단 게이트
-- Gemini checker
-- GitHub cloud automation
+- GitHub cloud automation/organization policy
 - Hermes / OMX / Codex CLI 런타임 자체 대체
+- 원격 CI/CD 파이프라인 자체 운영
 
-그건 기존 VM 스택이 맡는다.
+위 범위는 기존 VM/원격 인프라 스택이 맡는다.
 
 ## 추천 사용 흐름
 
