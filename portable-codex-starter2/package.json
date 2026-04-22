@@ -6,6 +6,8 @@
     "doctor:kit": "node scripts/doctor.mjs",
     "install:kit": "node scripts/install.mjs",
     "vm:preflight": "bash scripts/vm-ready-check.sh",
+    "test": "bash scripts/vm-ready-check.sh",
+    "build": "node scripts/doctor.mjs --target .",
     "senior-review": "bash scripts/get-senior-review.sh 1",
     "local-checks": "bash scripts/run-local-checks.sh",
     "factory:night": "bash scripts/factory-night.sh",
