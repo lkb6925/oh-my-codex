@@ -1,0 +1,14 @@
+# Unified Track Starter MCP template
+# Context7 and Postgres are the only default MCPs in `.codex/config.toml`.
+# Use this file if you want to swap commands or keep local variants.
+
+# Context7 MCP
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
+
+# Postgres MCP
+# Keep this read-only by default and prefer dev/staging over production.
+[mcp_servers.postgres]
+command = "bash"
+args = ["scripts/postgres-mcp.sh"]

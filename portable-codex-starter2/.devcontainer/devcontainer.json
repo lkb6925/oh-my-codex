@@ -1,0 +1,62 @@
+{
+  "name": "codex-overnight-ready-workspace",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": false,
+      "configureZshAsDefaultShell": false
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/rust:1": {
+      "version": "stable"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "github.copilot",
+        "github.copilot-chat",
+        "github.vscode-github-actions",
+        "biomejs.biome",
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "files.insertFinalNewline": true,
+        "files.trimTrailingWhitespace": true,
+        "typescript.tsdk": "node_modules/typescript/lib"
+      }
+    },
+    "codespaces": {
+      "openFiles": [
+        "README.md",
+        "AGENTS.md"
+      ]
+    }
+  },
+  "secrets": {
+    "GH_TOKEN": {
+      "description": "Optional personal access token for broader GitHub API access than the default Codespaces token.",
+      "documentationUrl": "https://docs.github.com/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token"
+    },
+    "OPENAI_API_KEY": {
+      "description": "Recommended if you use OpenAI Codex, OpenAI MCP integrations, or repo workflows that call OpenAI APIs.",
+      "documentationUrl": "https://platform.openai.com/api-keys"
+    },
+    "CONTEXT7_API_KEY": {
+      "description": "Recommended if you want stable Context7 MCP usage without anonymous rate limits.",
+      "documentationUrl": "https://context7.com/dashboard"
+    }
+  },
+  "updateContentCommand": "bash .devcontainer/scripts/update-content.sh",
+  "postCreateCommand": "bash .devcontainer/scripts/post-create.sh"
+}

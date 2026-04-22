@@ -7,6 +7,8 @@ node_modules/
 .codex/
 !portable-codex-starter/.codex/
 !portable-codex-starter/.codex/**
+!portable-codex-starter2/.codex/
+!portable-codex-starter2/.codex/**
 
 # Starter-local runtime logs
 portable-codex-starter/.github/hooks/logs/

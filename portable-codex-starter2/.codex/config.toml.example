@@ -1,0 +1,19 @@
+# Unified Track Starter defaults.
+# Copy to `.codex/config.toml` in the target repo if you want local defaults.
+
+model_reasoning_effort = "high"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+[agents]
+max_threads = 4
+max_depth = 1
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
+
+[mcp_servers.postgres]
+command = "bash"
+# Inject DSN via POSTGRES_MCP_DSN. Never commit real credentials.
+args = ["scripts/postgres-mcp.sh"]
