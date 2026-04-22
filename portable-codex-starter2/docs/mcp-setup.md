@@ -43,7 +43,8 @@ args = ["scripts/postgres-mcp.sh"]
 
 ### 참고: 로컬 포장/배포 준비 중일 때
 
-- `GEMINI_API_KEY`를 이미 VM에서 주입할 예정이면, 로컬에서 preflight 실행 시 경고만 보고 넘어가도 된다.
+- `GEMINI_API_KEY`는 VM 셸 환경이나 `~/.hermes/.env`에서 읽어온다. 따라서 VM에 이미 키를 넣어두었다면 `scripts/vm-ready-check.sh`와 senior review가 그대로 그 값을 쓸 수 있다.
+- `HERMES_ENV_FILE`를 따로 지정하면 `~/.hermes/.env` 대신 그 파일을 사용한다.
 - DSN은 파일 치환 대신 `POSTGRES_MCP_DSN` 환경 변수로만 주입한다.
 - 위 두 항목까지 실패로 강제하려면 아래처럼 strict 모드를 사용한다.
 

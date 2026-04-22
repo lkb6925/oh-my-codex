@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
+ROOT_NAME="$(basename "${ROOT_DIR}")"
 
 RUN_DIR="${FACTORY_RUN_DIR:-.omx/runs}"
 META_FILE="${RUN_DIR}/latest-run.json"
@@ -12,7 +13,7 @@ FINAL_SUMMARY_FILE="${RUN_DIR}/final-summary-${TIMESTAMP}.md"
 FINISH_STATE_FILE="${RUN_DIR}/latest-finish.json"
 PUSH_ON_FINISH="${FACTORY_PUSH_ON_FINISH:-1}"
 STOP_SESSION_ON_FINISH="${FACTORY_STOP_SESSION_ON_FINISH:-0}"
-SESSION_NAME="${FACTORY_SESSION_NAME:-factory-night}"
+SESSION_NAME="${FACTORY_SESSION_NAME:-factory-night-${ROOT_NAME}}"
 
 mkdir -p "${RUN_DIR}"
 

@@ -22,6 +22,7 @@ require_cmd() {
 
 status=0
 strict_preflight="${VM_PREFLIGHT_STRICT:-0}"
+require_gemini="${FACTORY_REQUIRE_GEMINI_API_KEY:-0}"
 require_cmd git || status=1
 require_cmd node || status=1
 require_cmd npm || status=1
@@ -31,11 +32,11 @@ require_cmd tmux || status=1
 if [[ -n "${GEMINI_API_KEY:-}" ]]; then
   echo "[PASS] GEMINI_API_KEY is set"
 else
-  if [[ "${strict_preflight}" == "1" ]]; then
-    echo "[FAIL] GEMINI_API_KEY is missing (VM_PREFLIGHT_STRICT=1)"
+  if [[ "${require_gemini}" == "1" ]]; then
+    echo "[FAIL] GEMINI_API_KEY is missing (FACTORY_REQUIRE_GEMINI_API_KEY=1)"
     status=1
   else
-    echo "[WARN] GEMINI_API_KEY is missing in this shell. If VM runtime injects it, this warning is expected."
+    echo "[INFO] GEMINI_API_KEY is not set in this shell; senior-review is optional unless FACTORY_REQUIRE_GEMINI_API_KEY=1."
   fi
 fi
 

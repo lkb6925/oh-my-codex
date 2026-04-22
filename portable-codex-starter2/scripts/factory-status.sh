@@ -3,13 +3,14 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
+ROOT_NAME="$(basename "${ROOT_DIR}")"
 
 JSON_MODE=0
 if [[ "${1:-}" == "--json" ]]; then
   JSON_MODE=1
 fi
 
-SESSION_NAME="${FACTORY_SESSION_NAME:-factory-night}"
+SESSION_NAME="${FACTORY_SESSION_NAME:-factory-night-${ROOT_NAME}}"
 RUN_DIR="${FACTORY_RUN_DIR:-.omx/runs}"
 META_FILE="${RUN_DIR}/latest-run.json"
 LAST_ALERT_FILE="${RUN_DIR}/latest-alert.json"

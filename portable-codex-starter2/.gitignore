@@ -8,7 +8,7 @@
 .tmp-test-output-round*.txt
 .harness.lock
 .harness.lock.d
-.omx/runs/run-*.log
-.omx/runs/watch-*.log
-.omx/runs/latest-run.json
-.omx/runs/launch-*.sh
+.omx/runs/
+.omx/logs/
+.omx/state/
+.omx/metrics.json

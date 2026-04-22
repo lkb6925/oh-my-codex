@@ -3,8 +3,9 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
+ROOT_NAME="$(basename "${ROOT_DIR}")"
 
-SESSION_NAME="${FACTORY_SESSION_NAME:-factory-night}"
+SESSION_NAME="${FACTORY_SESSION_NAME:-factory-night-${ROOT_NAME}}"
 RUN_DIR="${FACTORY_RUN_DIR:-.omx/runs}"
 OMX_COMMAND="${OMX_COMMAND:-omx}"
 OMX_BIN="${OMX_BIN:-omx}"
@@ -14,6 +15,7 @@ FACTORY_COMMAND_POLICY="${FACTORY_COMMAND_POLICY:-strict}"
 FACTORY_ALLOW_NON_OMX_COMMAND="${FACTORY_ALLOW_NON_OMX_COMMAND:-0}"
 FACTORY_OMX_DEFAULT_FLAGS="${FACTORY_OMX_DEFAULT_FLAGS:---tmux --madmax --high}"
 FACTORY_OMX_BLOCKLIST_REGEX="${FACTORY_OMX_BLOCKLIST_REGEX:-(^|[[:space:]])(--unsafe|--danger|--destructive|--no-sandbox)([[:space:]]|$)}"
+FACTORY_OMX_AUTO_UPDATE="${FACTORY_OMX_AUTO_UPDATE:-0}"
 TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 RUN_LOG="${RUN_DIR}/run-${TIMESTAMP}.log"
 META_FILE="${RUN_DIR}/latest-run.json"
@@ -117,12 +119,55 @@ if tmux has-session -t "${SESSION_NAME}" 2>/dev/null; then
 fi
 
 LAUNCH_SCRIPT="${RUN_DIR}/launch-${SESSION_NAME}.sh"
+if ! command -v script >/dev/null 2>&1; then
+  echo "[ERROR] script command not found; cannot allocate a real TTY for omx." >&2
+  exit 1
+fi
+
+OMX_AUTO_UPDATE_RENDERED="$(printf '%q' "${FACTORY_OMX_AUTO_UPDATE}")"
+TTY_COMMAND="env OMX_AUTO_UPDATE=${OMX_AUTO_UPDATE_RENDERED} ${OMX_COMMAND_RENDERED}"
 cat > "${LAUNCH_SCRIPT}" <<LAUNCH
 #!/usr/bin/env bash
 set -Eeuo pipefail
 cd "${ROOT_DIR}"
-echo "[INFO] factory-night start $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "${RUN_LOG}"
-${OMX_COMMAND_RENDERED} >> "${RUN_LOG}" 2>&1
+
+update_meta() {
+  local exit_code="\$1"
+  local finished_at
+  local final_status
+  local final_phase
+  finished_at="\$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  if [[ "\${exit_code}" == "0" ]]; then
+    final_status="completed"
+    final_phase="launch_complete"
+  else
+    final_status="failed"
+    final_phase="launch_failed"
+  fi
+  node -e '
+    const fs = require("fs");
+    const path = process.argv[1];
+    const status = process.argv[2];
+    const phase = process.argv[3];
+    const finishedAt = process.argv[4];
+    const exitCode = Number(process.argv[5]);
+    try {
+      const payload = JSON.parse(fs.readFileSync(path, "utf8"));
+      payload.status = status;
+      payload.phase = phase;
+      payload.finished_at = finishedAt;
+      payload.exit_code = exitCode;
+      fs.writeFileSync(path, JSON.stringify(payload, null, 2) + "\n", "utf8");
+    } catch {
+      process.stderr.write("[WARN] failed to update launch metadata\n");
+    }
+  ' "${META_FILE}" "\${final_status}" "\${final_phase}" "\${finished_at}" "\${exit_code}"
+}
+
+trap 'rc=\$?; update_meta "\$rc"' EXIT
+
+echo "[INFO] factory-night start \$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "${RUN_LOG}"
+script -q -f -a -e -c "${TTY_COMMAND}" "${RUN_LOG}"
 LAUNCH
 chmod +x "${LAUNCH_SCRIPT}"
 

@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
+ROOT_NAME="$(basename "${ROOT_DIR}")"
 
 JSON_QUERY_TOOL="jq"
 if ! command -v jq >/dev/null 2>&1; then
@@ -20,7 +21,7 @@ if [[ "${1:-}" == "--once" ]]; then
   ONCE_MODE=1
 fi
 
-SESSION_NAME="${FACTORY_SESSION_NAME:-factory-night}"
+SESSION_NAME="${FACTORY_SESSION_NAME:-factory-night-${ROOT_NAME}}"
 RUN_DIR="${FACTORY_RUN_DIR:-.omx/runs}"
 WATCH_INTERVAL_SECONDS="${WATCH_INTERVAL_SECONDS:-60}"
 LOG_STALL_SECONDS="${LOG_STALL_SECONDS:-1800}"
