@@ -109,6 +109,7 @@ bash scripts/factory-self-check.sh
 - `last_alert_severity`
 - `last_alert_code`
 - `poweroff_ready`
+- `require_review_for_poweroff`
 - `remaining_manual_actions`
 
 타입 규칙:
@@ -126,6 +127,7 @@ bash scripts/factory-self-check.sh
 - `WATCH_MAX_CYCLES=<n>`을 주면 무한 루프 대신 n회 체크 후 종료한다.
 - alert 발생 시 `${FACTORY_RUN_DIR:-.omx/runs}/latest-alert.json` 스냅샷이 갱신되어 Hermes가 최신 경고 상태를 쉽게 소비할 수 있다.
 - `.env` 로딩은 기본적으로 기존 shell env를 보존한다. 필요한 경우에만 `CODEX_ENV_OVERRIDE=1`로 덮어쓴다.
+- `REQUIRE_REVIEW_FOR_POWEROFF` 기본값은 `0`이다. 리뷰 미실행(`unknown`)을 즉시 전원 차단 금지로 보려면 `REQUIRE_REVIEW_FOR_POWEROFF=1`을 명시한다.
 - `factory-night.sh`는 기본 `strict` 정책에서 `OMX_COMMAND`를 보수적으로 검증한다.
   - `omx` 단독 입력은 자동으로 `--tmux --madmax --high`가 붙는다.
   - `--no-tmux`는 차단되고, `--tmux` 누락 시 자동 추가된다.

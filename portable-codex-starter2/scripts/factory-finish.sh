@@ -67,16 +67,20 @@ current_status="$(status_json)"
 initial_push_state="$(json_field "${current_status}" "push_state")"
 push_attempted="false"
 push_result="skipped"
+push_error_summary=""
 
 if [[ "${PUSH_ON_FINISH}" == "1" ]]; then
   if [[ "${initial_push_state}" == "needs_push" ]]; then
     push_attempted="true"
-    if git push; then
+    push_error_file="$(mktemp)"
+    if git push 2>"${push_error_file}"; then
       push_result="success"
     else
       push_result="failed"
+      push_error_summary="$(tail -n 20 "${push_error_file}" | tr '\n' ' ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
       echo "[WARN] git push failed during factory finish."
     fi
+    rm -f "${push_error_file}"
   elif [[ "${initial_push_state}" == "pushed" ]]; then
     push_result="already_pushed"
   elif [[ "${initial_push_state}" == "no_upstream" ]]; then
@@ -156,19 +160,23 @@ node -e '
   fs.writeFileSync(path, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 ' "${META_FILE}" "${final_status_label}" "${final_phase}" "${finished_at_value}" "${poweroff_ready}" "${remaining_actions_json}" "${push_state}" "${last_review_verdict}" "${FINAL_SUMMARY_FILE}" "${ROOT_DIR}" "$(git branch --show-current 2>/dev/null || echo unknown)"
 
-cat > "${FINISH_STATE_FILE}" <<JSON
-{
-  "schema_version": "1.0",
-  "generated_at": "${FINISHED_AT}",
-  "summary_file": "${FINAL_SUMMARY_FILE}",
-  "push_attempted": ${push_attempted},
-  "push_result": "${push_result}",
-  "push_state": "${push_state}",
-  "last_review_verdict": "${last_review_verdict}",
-  "poweroff_ready": ${poweroff_ready},
-  "remaining_manual_actions": ${remaining_actions_json}
-}
-JSON
+node -e '
+  const fs = require("fs");
+  const outputPath = process.argv[1];
+  const payload = {
+    schema_version: "1.0",
+    generated_at: process.argv[2],
+    summary_file: process.argv[3],
+    push_attempted: process.argv[4] === "true",
+    push_result: process.argv[5],
+    push_error_summary: process.argv[6],
+    push_state: process.argv[7],
+    last_review_verdict: process.argv[8],
+    poweroff_ready: process.argv[9] === "true",
+    remaining_manual_actions: JSON.parse(process.argv[10] || "[]")
+  };
+  fs.writeFileSync(outputPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+' "${FINISH_STATE_FILE}" "${FINISHED_AT}" "${FINAL_SUMMARY_FILE}" "${push_attempted}" "${push_result}" "${push_error_summary}" "${push_state}" "${last_review_verdict}" "${poweroff_ready}" "${remaining_actions_json}"
 
 echo "[INFO] factory-finish complete."
 echo "[INFO] summary: ${FINAL_SUMMARY_FILE}"

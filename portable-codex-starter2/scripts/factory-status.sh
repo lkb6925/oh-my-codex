@@ -13,7 +13,7 @@ SESSION_NAME="${FACTORY_SESSION_NAME:-factory-night}"
 RUN_DIR="${FACTORY_RUN_DIR:-.omx/runs}"
 META_FILE="${RUN_DIR}/latest-run.json"
 LAST_ALERT_FILE="${RUN_DIR}/latest-alert.json"
-REQUIRE_REVIEW_FOR_POWEROFF="${REQUIRE_REVIEW_FOR_POWEROFF:-1}"
+REQUIRE_REVIEW_FOR_POWEROFF="${REQUIRE_REVIEW_FOR_POWEROFF:-0}"
 
 json_field_from_file() {
   local file_path="$1"
@@ -152,17 +152,11 @@ if [[ "${session_exists}" == "true" ]]; then
   remaining_actions+=("stop_factory_session")
 fi
 
-remaining_actions_json="[]"
-if [[ "${#remaining_actions[@]}" -gt 0 ]]; then
-  remaining_actions_json="["
-  for action in "${remaining_actions[@]}"; do
-    if [[ "${remaining_actions_json}" != "[" ]]; then
-      remaining_actions_json+=","
-    fi
-    remaining_actions_json+="\"${action}\""
-  done
-  remaining_actions_json+="]"
-fi
+remaining_actions_json="$(printf '%s\n' "${remaining_actions[@]}" | node -e '
+  const fs = require("fs");
+  const raw = fs.readFileSync(0, "utf8").split("\n").map((line) => line.trim()).filter(Boolean);
+  process.stdout.write(JSON.stringify(raw));
+')"
 
 poweroff_ready="false"
 if [[ "${#remaining_actions[@]}" -eq 0 ]]; then
@@ -171,42 +165,32 @@ fi
 
 if [[ "${JSON_MODE}" == "1" ]]; then
   generated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  dirty_bool="false"
-  log_age_json="null"
-  meta_age_json="null"
-  if [[ "${dirty}" == "dirty" ]]; then
-    dirty_bool="true"
-  fi
-  if [[ "${log_age_seconds}" =~ ^[0-9]+$ ]]; then
-    log_age_json="${log_age_seconds}"
-  fi
-  if [[ "${meta_age_seconds}" =~ ^[0-9]+$ ]]; then
-    meta_age_json="${meta_age_seconds}"
-  fi
-  cat <<JSON
-{
-  "schema_version": "1.2",
-  "generated_at": "${generated_at}",
-  "run_state": "${run_state}",
-  "session_name": "${SESSION_NAME}",
-  "session_exists": ${session_exists},
-  "branch": "${branch}",
-  "dirty": ${dirty_bool},
-  "latest_commit": "${latest_commit}",
-  "latest_log": "${latest_log}",
-  "log_age_seconds": ${log_age_json},
-  "meta_file": "${META_FILE}",
-  "meta_age_seconds": ${meta_age_json},
-  "omx_status": "${omx_status}",
-  "push_state": "${push_state}",
-  "last_review_verdict": "${last_review_verdict}",
-  "last_alert_file": "${last_alert_file}",
-  "last_alert_severity": "${last_alert_severity}",
-  "last_alert_code": "${last_alert_code}",
-  "poweroff_ready": ${poweroff_ready},
-  "remaining_manual_actions": ${remaining_actions_json}
-}
-JSON
+  node -e '
+    const payload = {
+      schema_version: "1.3",
+      generated_at: process.argv[1],
+      run_state: process.argv[2],
+      session_name: process.argv[3],
+      session_exists: process.argv[4] === "true",
+      branch: process.argv[5],
+      dirty: process.argv[6] === "dirty",
+      latest_commit: process.argv[7],
+      latest_log: process.argv[8],
+      log_age_seconds: process.argv[9] === "" ? null : Number(process.argv[9]),
+      meta_file: process.argv[10],
+      meta_age_seconds: process.argv[11] === "" ? null : Number(process.argv[11]),
+      omx_status: process.argv[12],
+      push_state: process.argv[13],
+      last_review_verdict: process.argv[14],
+      last_alert_file: process.argv[15],
+      last_alert_severity: process.argv[16],
+      last_alert_code: process.argv[17],
+      poweroff_ready: process.argv[18] === "true",
+      require_review_for_poweroff: process.argv[19] === "1",
+      remaining_manual_actions: JSON.parse(process.argv[20] || "[]")
+    };
+    process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  ' "${generated_at}" "${run_state}" "${SESSION_NAME}" "${session_exists}" "${branch}" "${dirty}" "${latest_commit}" "${latest_log}" "${log_age_seconds}" "${META_FILE}" "${meta_age_seconds}" "${omx_status}" "${push_state}" "${last_review_verdict}" "${last_alert_file}" "${last_alert_severity}" "${last_alert_code}" "${poweroff_ready}" "${REQUIRE_REVIEW_FOR_POWEROFF}" "${remaining_actions_json}"
   exit 0
 fi
 
@@ -225,5 +209,6 @@ echo "  last_review_verdict: ${last_review_verdict}"
 echo "  last_alert_file: ${last_alert_file:-none}"
 echo "  last_alert_severity: ${last_alert_severity:-none}"
 echo "  last_alert_code: ${last_alert_code:-none}"
+echo "  require_review_for_poweroff: ${REQUIRE_REVIEW_FOR_POWEROFF}"
 echo "  poweroff_ready: ${poweroff_ready}"
 echo "  remaining_manual_actions: ${remaining_actions[*]:-none}"
