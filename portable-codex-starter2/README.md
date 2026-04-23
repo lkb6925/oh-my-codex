@@ -29,6 +29,7 @@
 - 작업공간이 깨끗하면 `omx team`을 우선 고려한다. 팀 모드는 dedicated worktree를 자동으로 사용해 병렬 lane 관리에 유리하다.
 - `watch`는 감시, `summary`는 상태 브리핑, `finish`는 마감/종료 처리다.
 - `factory:team`은 `omx team` 기반의 병렬 worktree lane 런처다. 작업공간이 깨끗할 때 우선 쓴다.
+- `factory:team:shutdown`은 팀 세션을 종료하고 런타임 정리 상태를 남긴다.
 ## 역할 분리 (중요)
 
 - **Codex CLI**: 실제 코드 작성/수정 실행자

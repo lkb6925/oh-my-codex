@@ -14,6 +14,10 @@ FINISH_STATE_FILE="${RUN_DIR}/latest-finish.json"
 PUSH_ON_FINISH="${FACTORY_PUSH_ON_FINISH:-1}"
 STOP_SESSION_ON_FINISH="${FACTORY_STOP_SESSION_ON_FINISH:-0}"
 SESSION_NAME="${FACTORY_SESSION_NAME:-factory-night-${ROOT_NAME}}"
+TEAM_SHUTDOWN_ON_FINISH="${FACTORY_TEAM_SHUTDOWN_ON_FINISH:-1}"
+TEAM_SHUTDOWN_FORCE="${FACTORY_TEAM_SHUTDOWN_FORCE:-1}"
+TEAM_SHUTDOWN_CONFIRM_ISSUES="${FACTORY_TEAM_SHUTDOWN_CONFIRM_ISSUES:-0}"
+TEAM_SHUTDOWN_STATE_FILE="${RUN_DIR}/latest-shutdown.json"
 
 mkdir -p "${RUN_DIR}"
 
@@ -106,14 +110,38 @@ poweroff_ready="$(json_field "${final_status}" "poweroff_ready")"
 push_state="$(json_field "${final_status}" "push_state")"
 last_review_verdict="$(json_field "${final_status}" "last_review_verdict")"
 session_exists="$(json_field "${final_status}" "session_exists")"
+team_name="$(json_field "${final_status}" "team_name")"
 remaining_actions_json="$(json_array_field "${final_status}" "remaining_manual_actions")"
+team_shutdown_result="skipped"
+team_shutdown_log=""
+team_shutdown_requested_at=""
+team_shutdown_finished_at=""
+
+if [[ "${poweroff_ready}" == "true" && -n "${team_name}" && "${TEAM_SHUTDOWN_ON_FINISH}" != "0" ]]; then
+  team_shutdown_requested_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  if FACTORY_TEAM_SHUTDOWN_FORCE="${TEAM_SHUTDOWN_FORCE}" FACTORY_TEAM_SHUTDOWN_CONFIRM_ISSUES="${TEAM_SHUTDOWN_CONFIRM_ISSUES}" bash scripts/factory-team-shutdown.sh "${team_name}"; then
+    team_shutdown_result="success"
+  else
+    team_shutdown_result="failed"
+  fi
+  if [[ -f "${TEAM_SHUTDOWN_STATE_FILE}" ]]; then
+    team_shutdown_result="$(json_field "$(cat "${TEAM_SHUTDOWN_STATE_FILE}")" "result")"
+    team_shutdown_log="$(json_field "$(cat "${TEAM_SHUTDOWN_STATE_FILE}")" "log_file")"
+    team_shutdown_finished_at="$(json_field "$(cat "${TEAM_SHUTDOWN_STATE_FILE}")" "finished_at")"
+  fi
+fi
 
 final_status_label="stalled"
 final_phase="finish_pending"
 finished_at_value="${FINISHED_AT}"
 if [[ "${poweroff_ready}" == "true" ]]; then
-  final_status_label="completed"
-  final_phase="finish_complete"
+  if [[ "${team_shutdown_result}" == "failed" ]]; then
+    final_status_label="stalled"
+    final_phase="team_shutdown_failed"
+  else
+    final_status_label="completed"
+    final_phase="finish_complete"
+  fi
 elif [[ "${session_exists}" == "true" ]]; then
   final_status_label="running"
   final_phase="finish_requested"
@@ -142,6 +170,11 @@ node -e '
   const summaryPath = process.argv[9];
   const repoPath = process.argv[10];
   const branch = process.argv[11];
+  const teamShutdownResult = process.argv[12];
+  const teamShutdownRequestedAt = process.argv[13];
+  const teamShutdownFinishedAt = process.argv[14];
+  const teamShutdownLog = process.argv[15];
+  const teamShutdownStateFile = process.argv[16];
   let payload = {};
   try {
     payload = JSON.parse(fs.readFileSync(path, "utf8"));
@@ -158,8 +191,13 @@ node -e '
   payload.push_state = pushState;
   payload.last_review_verdict = reviewVerdict;
   payload.final_summary_file = summaryPath;
+  payload.team_shutdown_result = teamShutdownResult;
+  payload.team_shutdown_requested_at = teamShutdownRequestedAt || null;
+  payload.team_shutdown_finished_at = teamShutdownFinishedAt || null;
+  payload.team_shutdown_log = teamShutdownLog || null;
+  payload.team_shutdown_state_file = teamShutdownStateFile || null;
   fs.writeFileSync(path, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
-' "${META_FILE}" "${final_status_label}" "${final_phase}" "${finished_at_value}" "${poweroff_ready}" "${remaining_actions_json}" "${push_state}" "${last_review_verdict}" "${FINAL_SUMMARY_FILE}" "${ROOT_DIR}" "$(git branch --show-current 2>/dev/null || echo unknown)"
+' "${META_FILE}" "${final_status_label}" "${final_phase}" "${finished_at_value}" "${poweroff_ready}" "${remaining_actions_json}" "${push_state}" "${last_review_verdict}" "${FINAL_SUMMARY_FILE}" "${ROOT_DIR}" "$(git branch --show-current 2>/dev/null || echo unknown)" "${team_shutdown_result}" "${team_shutdown_requested_at}" "${team_shutdown_finished_at}" "${team_shutdown_log}" "${TEAM_SHUTDOWN_STATE_FILE}"
 
 node -e '
   const fs = require("fs");
@@ -174,13 +212,18 @@ node -e '
     push_state: process.argv[7],
     last_review_verdict: process.argv[8],
     poweroff_ready: process.argv[9] === "true",
-    remaining_manual_actions: JSON.parse(process.argv[10] || "[]")
+    remaining_manual_actions: JSON.parse(process.argv[10] || "[]"),
+    team_shutdown_result: process.argv[11],
+    team_shutdown_requested_at: process.argv[12],
+    team_shutdown_finished_at: process.argv[13],
+    team_shutdown_log: process.argv[14],
+    team_shutdown_state_file: process.argv[15]
   };
   fs.writeFileSync(outputPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
-' "${FINISH_STATE_FILE}" "${FINISHED_AT}" "${FINAL_SUMMARY_FILE}" "${push_attempted}" "${push_result}" "${push_error_summary}" "${push_state}" "${last_review_verdict}" "${poweroff_ready}" "${remaining_actions_json}"
+' "${FINISH_STATE_FILE}" "${FINISHED_AT}" "${FINAL_SUMMARY_FILE}" "${push_attempted}" "${push_result}" "${push_error_summary}" "${push_state}" "${last_review_verdict}" "${poweroff_ready}" "${remaining_actions_json}" "${team_shutdown_result}" "${team_shutdown_requested_at}" "${team_shutdown_finished_at}" "${team_shutdown_log}" "${TEAM_SHUTDOWN_STATE_FILE}"
 
 echo "[INFO] factory-finish complete."
 echo "[INFO] summary: ${FINAL_SUMMARY_FILE}"
 echo "[INFO] finish state: ${FINISH_STATE_FILE}"
-echo "[INFO] poweroff_ready=${poweroff_ready} push_state=${push_state} review=${last_review_verdict}"
+echo "[INFO] poweroff_ready=${poweroff_ready} push_state=${push_state} review=${last_review_verdict} team_shutdown=${team_shutdown_result}"
 node scripts/harness-event.mjs --event factory_finish_complete --details "${FINISH_STATE_FILE}" >/dev/null 2>&1 || true

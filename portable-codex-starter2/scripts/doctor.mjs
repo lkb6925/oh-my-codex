@@ -41,6 +41,7 @@ const factoryTeamPath = join(target, "scripts", "factory-team.sh");
 const factoryTeamStatusPath = join(target, "scripts", "factory-team-status.sh");
 const factoryTeamAwaitPath = join(target, "scripts", "factory-team-await.sh");
 const factoryTeamSummaryPath = join(target, "scripts", "factory-team-summary.sh");
+const factoryTeamShutdownPath = join(target, "scripts", "factory-team-shutdown.sh");
 
 const agentCount = await countAgentFiles(agentsPath);
 const agentsSkillScan = await inspectSkillDirectories(agentsSkillsPath);
@@ -135,6 +136,7 @@ checks.push(checkOptional("scripts/factory-team.sh", factoryTeamPath));
 checks.push(checkOptional("scripts/factory-team-status.sh", factoryTeamStatusPath));
 checks.push(checkOptional("scripts/factory-team-await.sh", factoryTeamAwaitPath));
 checks.push(checkOptional("scripts/factory-team-summary.sh", factoryTeamSummaryPath));
+checks.push(checkOptional("scripts/factory-team-shutdown.sh", factoryTeamShutdownPath));
 if (configUsesPostgres) {
   checks.push({
     name: "postgres MCP uses env launcher",

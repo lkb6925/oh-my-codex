@@ -19,6 +19,7 @@
     "factory:team:status": "bash scripts/factory-team-status.sh",
     "factory:team:await": "bash scripts/factory-team-await.sh",
     "factory:team:summary": "bash scripts/factory-team-summary.sh",
+    "factory:team:shutdown": "bash scripts/factory-team-shutdown.sh",
     "factory:self-check": "bash scripts/factory-self-check.sh"
   }
 }

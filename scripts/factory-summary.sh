@@ -6,6 +6,7 @@ cd "${ROOT_DIR}"
 
 RUN_DIR="${FACTORY_RUN_DIR:-.omx/runs}"
 latest_run_meta="${RUN_DIR}/latest-run.json"
+latest_shutdown="${RUN_DIR}/latest-shutdown.json"
 latest_checks="$(ls -1t .tmp-local-checks-round*.summary.json 2>/dev/null | head -n 1 || true)"
 latest_review="$(ls -1t .tmp-gemini-review-round*.json 2>/dev/null | head -n 1 || true)"
 latest_log="$(ls -1t "${RUN_DIR}"/run-*.log 2>/dev/null | head -n 1 || true)"
@@ -64,22 +65,41 @@ meta_last_event=""
 meta_execution_mode=""
 meta_team_spec=""
 meta_team_name_hint=""
+meta_team_name=""
+meta_team_shutdown_result=""
+meta_team_shutdown_requested_at=""
+meta_team_shutdown_finished_at=""
+meta_team_shutdown_log=""
 if [[ -f "${latest_run_meta}" && "${jq_available}" == "1" ]]; then
   meta_last_update_at="$(jq -r '.last_update_at // ""' "${latest_run_meta}")"
   meta_last_event="$(jq -r '.last_event // ""' "${latest_run_meta}")"
   meta_execution_mode="$(jq -r '.execution_mode // ""' "${latest_run_meta}")"
   meta_team_spec="$(jq -r '.team_spec // ""' "${latest_run_meta}")"
   meta_team_name_hint="$(jq -r '.team_name_hint // ""' "${latest_run_meta}")"
+  meta_team_name="$(jq -r '.team_name // ""' "${latest_run_meta}")"
+fi
+if [[ -f "${latest_shutdown}" && "${jq_available}" == "1" ]]; then
+  meta_team_shutdown_result="$(jq -r '.result // ""' "${latest_shutdown}")"
+  meta_team_shutdown_requested_at="$(jq -r '.requested_at // ""' "${latest_shutdown}")"
+  meta_team_shutdown_finished_at="$(jq -r '.finished_at // ""' "${latest_shutdown}")"
+  meta_team_shutdown_log="$(jq -r '.log_file // ""' "${latest_shutdown}")"
 fi
 
 if [[ -n "${meta_last_update_at}" || -n "${meta_last_event}" ]]; then
   echo "- Run manifest last_update_at: ${meta_last_update_at:-unknown}"
   echo "- Run manifest last_event: ${meta_last_event:-unknown}"
 fi
-if [[ -n "${meta_execution_mode}" || -n "${meta_team_spec}" || -n "${meta_team_name_hint}" ]]; then
+if [[ -n "${meta_execution_mode}" || -n "${meta_team_spec}" || -n "${meta_team_name_hint}" || -n "${meta_team_name}" ]]; then
   echo "- Run manifest execution_mode: ${meta_execution_mode:-unknown}"
   echo "- Run manifest team_spec: ${meta_team_spec:-unknown}"
   echo "- Run manifest team_name_hint: ${meta_team_name_hint:-unknown}"
+  echo "- Run manifest team_name: ${meta_team_name:-unknown}"
+fi
+if [[ -n "${meta_team_shutdown_result}" || -n "${meta_team_shutdown_requested_at}" || -n "${meta_team_shutdown_finished_at}" ]]; then
+  echo "- Team shutdown result: ${meta_team_shutdown_result:-unknown}"
+  echo "- Team shutdown requested_at: ${meta_team_shutdown_requested_at:-unknown}"
+  echo "- Team shutdown finished_at: ${meta_team_shutdown_finished_at:-unknown}"
+  echo "- Team shutdown log: ${meta_team_shutdown_log:-unknown}"
 fi
 
 if [[ -n "${latest_log}" ]]; then

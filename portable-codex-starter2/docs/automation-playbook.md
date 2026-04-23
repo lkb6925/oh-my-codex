@@ -20,6 +20,7 @@
 - `scripts/factory-team-status.sh`: team 상태 조회
 - `scripts/factory-team-await.sh`: team 완료 대기
 - `scripts/factory-team-summary.sh`: team 요약/상태 브리핑
+- `scripts/factory-team-shutdown.sh`: team 종료/정리
 - `scripts/factory-self-check.sh`: 상태/알림 JSON 계약 확인
 - `scripts/run-local-checks.sh`: local verification 전용 분리 계층
 - `scripts/harness-event.mjs`: watch/summary/finish용 이벤트 기록기
@@ -77,10 +78,11 @@ bash scripts/factory-night.sh
 # 병렬 worktree lane 시작 (clean repo 우선)
 bash scripts/factory-team.sh --spec 4:executor "fix failing tests in parallel lanes"
 
-# team 상태/요약/대기
+# team 상태/요약/대기/종료
 bash scripts/factory-team-status.sh
 bash scripts/factory-team-summary.sh
 bash scripts/factory-team-await.sh
+bash scripts/factory-team-shutdown.sh
 
 # 상태 확인
 bash scripts/factory-status.sh
@@ -93,14 +95,14 @@ bash scripts/factory-watch.sh --once
 # 요약
 bash scripts/factory-summary.sh
 
-# 마감 처리 (push + final summary + poweroff 준비 계산)
+# 마감 처리 (push + final summary + poweroff 준비 계산 + team shutdown)
 bash scripts/factory-finish.sh
 
 # 하네스 계약 확인
 bash scripts/factory-self-check.sh
 ```
 
-`watch`는 스트림 감시, `summary`는 요약 브리핑, `finish`는 마감/푸시/세션 정리를 담당한다.
+`watch`는 스트림 감시, `summary`는 요약 브리핑, `finish`는 마감/푸시/세션 정리/팀 종료를 담당한다.
 
 ## 상태 JSON 스키마 (Hermes용)
 
