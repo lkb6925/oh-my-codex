@@ -47,6 +47,8 @@ Portable skills live under `.agents/skills/`.
 - Final reports must include changed files, verification performed, and remaining risks.
 - For user-visible UI or UX changes, confirm direction before broad visual rewrites when the desired outcome is not already clear from the repo or request.
 - Keep the default four-agent posture: `architect`, `planner`, `executor`, `debugger`.
+- Use parallel worktrees or isolated scratch dirs for independent lanes whenever possible.
+- When the workspace is clean enough, prefer `omx team` for durable parallel lanes because it creates dedicated worktrees automatically.
 - Do not recreate local push gates, long self-healing loops, or background worker systems unless the user explicitly asks for them.
 
 ## Delegation Rules

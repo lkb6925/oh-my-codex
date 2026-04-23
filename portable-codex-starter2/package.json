@@ -15,6 +15,10 @@
     "factory:watch": "bash scripts/factory-watch.sh",
     "factory:summary": "bash scripts/factory-summary.sh",
     "factory:finish": "bash scripts/factory-finish.sh",
+    "factory:team": "bash scripts/factory-team.sh",
+    "factory:team:status": "bash scripts/factory-team-status.sh",
+    "factory:team:await": "bash scripts/factory-team-await.sh",
+    "factory:team:summary": "bash scripts/factory-team-summary.sh",
     "factory:self-check": "bash scripts/factory-self-check.sh"
   }
 }

@@ -192,6 +192,7 @@ JSON
 handle_exit() {
   local script_exit_code="$?"
   write_summary_artifact "${script_exit_code}"
+  node scripts/harness-event.mjs --event local_checks_complete --details "${summary_file}" >/dev/null 2>&1 || true
   cleanup_lock
 }
 

@@ -277,6 +277,7 @@ while true; do
     ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo "[WARN] ${ts} :: ${reason[*]} (severity=${severity})" | tee -a "${WATCH_LOG}"
     write_alert_snapshot "${status_json}" "${reason[*]}" "${severity}" "${suggested_action}" "${alert_code}"
+    node scripts/harness-event.mjs --event factory_alert --details "${alert_code}" >/dev/null 2>&1 || true
     update_run_state_on_alert "${next_run_status}" "${next_run_phase}"
     bash scripts/factory-status.sh | tee -a "${WATCH_LOG}"
   fi

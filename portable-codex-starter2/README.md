@@ -16,6 +16,7 @@
 - `.codex/agents/`에 핵심 4인방만 유지
 - `.agents/skills/`로 반복 절차 고정
 - `.omx/checkpoints/`로 체크포인트 복구 지점 제공
+- `.omx/hooks/`와 `scripts/harness-event.mjs`로 run/event 기록
 - 설치는 `.omx/checkpoints/`만 옮기고 `.omx/state`, `.omx/logs`, `.omx/runs`는 VM 로컬에 남긴다.
 - `.devcontainer/`는 필요할 때만 쓰는 보조 파일
 - `.codex/config.toml`로 MCP 기본값 제공
@@ -24,7 +25,10 @@
 
 - 하네스는 추가하되 기존 OMX/Hermes/Codex 런타임을 대체하지 않는다.
 - cloud hook/workflow 계층은 넣지 않고 VM 로컬 운영 스크립트에 집중한다.
-
+- 독립 작업은 병렬 worktree/worker 우선으로 처리하고, 파일이 겹칠 때만 직렬로 묶는다.
+- 작업공간이 깨끗하면 `omx team`을 우선 고려한다. 팀 모드는 dedicated worktree를 자동으로 사용해 병렬 lane 관리에 유리하다.
+- `watch`는 감시, `summary`는 상태 브리핑, `finish`는 마감/종료 처리다.
+- `factory:team`은 `omx team` 기반의 병렬 worktree lane 런처다. 작업공간이 깨끗할 때 우선 쓴다.
 ## 역할 분리 (중요)
 
 - **Codex CLI**: 실제 코드 작성/수정 실행자
@@ -113,8 +117,18 @@ node scripts/doctor.mjs --target /path/to/your-project --skills-root=.codex
 ```bash
 npm run vm:preflight
 npm run factory:night
+npm run factory:watch
+npm run factory:summary
+npm run factory:finish
 npm run factory:status
 ```
+
+운영 의미:
+- `factory:night` = 실행 시작
+- `factory:watch` = 감시/알림
+- `factory:summary` = 현재 상태 요약
+- `factory:finish` = 마감/푸시/전원 준비
+- `factory:status` = 즉시 상태 조회
 
 기본적으로 `factory:night`는 `FACTORY_COMMAND_POLICY=strict`로 실행되어 `OMX_COMMAND`를 보수적으로 검증한다. bare `omx`는 자동으로 `--tmux --madmax --high`를 붙여 실행하며, 위험 플래그 패턴은 차단된다.
 장기적으로 더 구조화된 입력이 필요하면 `OMX_BIN` + `OMX_ARGS`를 사용할 수 있으며, 이 조합은 `OMX_COMMAND`보다 우선한다.

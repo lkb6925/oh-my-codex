@@ -183,3 +183,4 @@ echo "[INFO] factory-finish complete."
 echo "[INFO] summary: ${FINAL_SUMMARY_FILE}"
 echo "[INFO] finish state: ${FINISH_STATE_FILE}"
 echo "[INFO] poweroff_ready=${poweroff_ready} push_state=${push_state} review=${last_review_verdict}"
+node scripts/harness-event.mjs --event factory_finish_complete --details "${FINISH_STATE_FILE}" >/dev/null 2>&1 || true

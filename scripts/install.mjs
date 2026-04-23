@@ -19,6 +19,7 @@ await copyInto(join(packRoot, "AGENTS.md"), join(target, "AGENTS.md"));
 await copyTree(join(packRoot, ".codex", "agents"), join(target, ".codex", "agents"));
 // Only copy durable recovery points. Runtime state/logs/runs stay local to the VM.
 await copyTree(join(packRoot, ".omx", "checkpoints"), join(target, ".omx", "checkpoints"));
+await copyTree(join(packRoot, ".omx", "hooks"), join(target, ".omx", "hooks"));
 await copyInto(join(starterDocsRoot, "README.md"), join(target, ".codex", "starter-docs", "README.md"));
 await copyTree(join(starterDocsRoot, "docs"), join(target, ".codex", "starter-docs", "docs"));
 await mergeGitignore(join(packRoot, ".gitignore"), join(target, ".gitignore"));
@@ -28,6 +29,11 @@ await copyInto(join(packRoot, "scripts", "gemini-reviewer.mjs"), join(target, "s
 await copyInto(join(packRoot, "scripts", "get-senior-review.sh"), join(target, "scripts", "get-senior-review.sh"));
 await copyInto(join(packRoot, "scripts", "run-local-checks.sh"), join(target, "scripts", "run-local-checks.sh"));
 await copyInto(join(packRoot, "scripts", "review-gate.mjs"), join(target, "scripts", "review-gate.mjs"));
+await copyInto(join(packRoot, "scripts", "harness-event.mjs"), join(target, "scripts", "harness-event.mjs"));
+await copyInto(join(packRoot, "scripts", "factory-team.sh"), join(target, "scripts", "factory-team.sh"));
+await copyInto(join(packRoot, "scripts", "factory-team-status.sh"), join(target, "scripts", "factory-team-status.sh"));
+await copyInto(join(packRoot, "scripts", "factory-team-await.sh"), join(target, "scripts", "factory-team-await.sh"));
+await copyInto(join(packRoot, "scripts", "factory-team-summary.sh"), join(target, "scripts", "factory-team-summary.sh"));
 await copyInto(join(packRoot, "scripts", "vm-ready-check.sh"), join(target, "scripts", "vm-ready-check.sh"));
 await copyInto(join(packRoot, "scripts", "postgres-mcp.sh"), join(target, "scripts", "postgres-mcp.sh"));
 await copyInto(join(packRoot, "scripts", "factory-night.sh"), join(target, "scripts", "factory-night.sh"));

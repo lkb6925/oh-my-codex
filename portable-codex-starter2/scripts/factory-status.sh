@@ -116,8 +116,20 @@ if [[ -n "${last_alert_file}" ]]; then
 fi
 
 meta_status=""
+meta_last_update_at=""
+meta_last_event=""
+meta_execution_mode=""
+meta_team_spec=""
+meta_team_name_hint=""
+meta_team_fallback_command=""
 if [[ -f "${META_FILE}" ]]; then
   meta_status="$(json_field_from_file "${META_FILE}" "status")"
+  meta_last_update_at="$(json_field_from_file "${META_FILE}" "last_update_at")"
+  meta_last_event="$(json_field_from_file "${META_FILE}" "last_event")"
+  meta_execution_mode="$(json_field_from_file "${META_FILE}" "execution_mode")"
+  meta_team_spec="$(json_field_from_file "${META_FILE}" "team_spec")"
+  meta_team_name_hint="$(json_field_from_file "${META_FILE}" "team_name_hint")"
+  meta_team_fallback_command="$(json_field_from_file "${META_FILE}" "team_fallback_command")"
 fi
 run_state="idle"
 if [[ "${session_exists}" == "true" ]]; then
@@ -188,10 +200,14 @@ if [[ "${JSON_MODE}" == "1" ]]; then
       last_alert_code: process.argv[17],
       poweroff_ready: process.argv[18] === "true",
       require_review_for_poweroff: process.argv[19] === "1",
-      remaining_manual_actions: JSON.parse(process.argv[20] || "[]")
+      remaining_manual_actions: JSON.parse(process.argv[20] || "[]"),
+      execution_mode: process.argv[21],
+      team_spec: process.argv[22],
+      team_name_hint: process.argv[23],
+      team_fallback_command: process.argv[24]
     };
     process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-  ' "${generated_at}" "${run_state}" "${SESSION_NAME}" "${session_exists}" "${branch}" "${dirty}" "${latest_commit}" "${latest_log}" "${log_age_seconds}" "${META_FILE}" "${meta_age_seconds}" "${omx_status}" "${push_state}" "${last_review_verdict}" "${last_alert_file}" "${last_alert_severity}" "${last_alert_code}" "${poweroff_ready}" "${REQUIRE_REVIEW_FOR_POWEROFF}" "${remaining_actions_json}"
+  ' "${generated_at}" "${run_state}" "${SESSION_NAME}" "${session_exists}" "${branch}" "${dirty}" "${latest_commit}" "${latest_log}" "${log_age_seconds}" "${META_FILE}" "${meta_age_seconds}" "${omx_status}" "${push_state}" "${last_review_verdict}" "${last_alert_file}" "${last_alert_severity}" "${last_alert_code}" "${poweroff_ready}" "${REQUIRE_REVIEW_FOR_POWEROFF}" "${remaining_actions_json}" "${meta_execution_mode}" "${meta_team_spec}" "${meta_team_name_hint}" "${meta_team_fallback_command}"
   exit 0
 fi
 
@@ -204,6 +220,12 @@ echo "  latest_commit: ${latest_commit}"
 echo "  latest_log: ${latest_log:-none}"
 echo "  log_age_seconds: ${log_age_seconds:-n/a}"
 echo "  meta_age_seconds: ${meta_age_seconds:-n/a}"
+echo "  last_update_at: ${meta_last_update_at:-n/a}"
+echo "  last_event: ${meta_last_event:-n/a}"
+echo "  execution_mode: ${meta_execution_mode:-n/a}"
+echo "  team_spec: ${meta_team_spec:-n/a}"
+echo "  team_name_hint: ${meta_team_name_hint:-n/a}"
+echo "  team_fallback_command: ${meta_team_fallback_command:-n/a}"
 echo "  omx_status: ${omx_status}"
 echo "  push_state: ${push_state}"
 echo "  last_review_verdict: ${last_review_verdict}"

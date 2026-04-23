@@ -188,10 +188,15 @@ cat > "${META_FILE}" <<JSON
   "omx_bin": "${OMX_BIN}",
   "omx_args_raw": "${OMX_ARGS}",
   "omx_command_effective": "${OMX_COMMAND_RENDERED}",
-  "command_policy": "${FACTORY_COMMAND_POLICY}"
+  "command_policy": "${FACTORY_COMMAND_POLICY}",
+  "last_update_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "last_event": "factory_started",
+  "last_event_details": "${SESSION_NAME}",
+  "execution_mode": "tmux"
 }
 JSON
 
 echo "[INFO] factory-night session started: ${SESSION_NAME}"
 echo "[INFO] run log: ${RUN_LOG}"
 echo "[INFO] $(date -u +%Y-%m-%dT%H:%M:%SZ) session started=${SESSION_NAME} run_log=${RUN_LOG}" >> "${EVENT_LOG}"
+node scripts/harness-event.mjs --event factory_started --details "${SESSION_NAME}" >/dev/null 2>&1 || true

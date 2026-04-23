@@ -34,6 +34,13 @@ const starterDocsReadmePath = join(target, ".codex", "starter-docs", "README.md"
 const starterDocsAutomationPath = join(target, ".codex", "starter-docs", "docs", "automation-playbook.md");
 const checkpointsPath = join(target, ".omx", "checkpoints");
 const checkpointsGitkeepPath = join(checkpointsPath, ".gitkeep");
+const hooksPath = join(target, ".omx", "hooks");
+const hooksSamplePath = join(hooksPath, "sample-plugin.mjs");
+const harnessEventPath = join(target, "scripts", "harness-event.mjs");
+const factoryTeamPath = join(target, "scripts", "factory-team.sh");
+const factoryTeamStatusPath = join(target, "scripts", "factory-team-status.sh");
+const factoryTeamAwaitPath = join(target, "scripts", "factory-team-await.sh");
+const factoryTeamSummaryPath = join(target, "scripts", "factory-team-summary.sh");
 
 const agentCount = await countAgentFiles(agentsPath);
 const agentsSkillScan = await inspectSkillDirectories(agentsSkillsPath);
@@ -121,6 +128,13 @@ checks.push({
 });
 checks.push(checkOptional(".omx/checkpoints", checkpointsPath));
 checks.push(checkOptional(".omx/checkpoints/.gitkeep", checkpointsGitkeepPath));
+checks.push(checkOptional(".omx/hooks", hooksPath));
+checks.push(checkOptional(".omx/hooks/sample-plugin.mjs", hooksSamplePath));
+checks.push(checkOptional("scripts/harness-event.mjs", harnessEventPath));
+checks.push(checkOptional("scripts/factory-team.sh", factoryTeamPath));
+checks.push(checkOptional("scripts/factory-team-status.sh", factoryTeamStatusPath));
+checks.push(checkOptional("scripts/factory-team-await.sh", factoryTeamAwaitPath));
+checks.push(checkOptional("scripts/factory-team-summary.sh", factoryTeamSummaryPath));
 if (configUsesPostgres) {
   checks.push({
     name: "postgres MCP uses env launcher",

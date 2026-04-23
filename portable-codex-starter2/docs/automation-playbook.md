@@ -16,8 +16,13 @@
 - `scripts/factory-watch.sh`: 읽기 전용 감시/알림
 - `scripts/factory-summary.sh`: 아침 점검용 요약 리포트
 - `scripts/factory-finish.sh`: 최종 push/요약/종료 준비 상태 계산
+- `scripts/factory-team.sh`: `omx team` 기반의 병렬 worktree lane 런처(깨끗한 repo일 때 우선 사용)
+- `scripts/factory-team-status.sh`: team 상태 조회
+- `scripts/factory-team-await.sh`: team 완료 대기
+- `scripts/factory-team-summary.sh`: team 요약/상태 브리핑
 - `scripts/factory-self-check.sh`: 상태/알림 JSON 계약 확인
 - `scripts/run-local-checks.sh`: local verification 전용 분리 계층
+- `scripts/harness-event.mjs`: watch/summary/finish용 이벤트 기록기
 
 ## 권장 설치
 
@@ -69,12 +74,21 @@ node scripts/install.mjs --target /path/to/your-project --with-config --core-onl
 # 야간 실행 시작 (idempotent)
 bash scripts/factory-night.sh
 
+# 병렬 worktree lane 시작 (clean repo 우선)
+bash scripts/factory-team.sh --spec 4:executor "fix failing tests in parallel lanes"
+
+# team 상태/요약/대기
+bash scripts/factory-team-status.sh
+bash scripts/factory-team-summary.sh
+bash scripts/factory-team-await.sh
+
 # 상태 확인
 bash scripts/factory-status.sh
 bash scripts/factory-status.sh --json
 
 # 감시 (읽기 전용)
 bash scripts/factory-watch.sh
+bash scripts/factory-watch.sh --once
 
 # 요약
 bash scripts/factory-summary.sh
@@ -85,6 +99,8 @@ bash scripts/factory-finish.sh
 # 하네스 계약 확인
 bash scripts/factory-self-check.sh
 ```
+
+`watch`는 스트림 감시, `summary`는 요약 브리핑, `finish`는 마감/푸시/세션 정리를 담당한다.
 
 ## 상태 JSON 스키마 (Hermes용)
 
@@ -111,6 +127,11 @@ bash scripts/factory-self-check.sh
 - `poweroff_ready`
 - `require_review_for_poweroff`
 - `remaining_manual_actions`
+- `execution_mode` (`tmux` | `omx-team` | `fallback`)
+- `team_spec`
+- `team_name_hint`
+- `team_fallback_command`
+- `team_name`
 
 타입 규칙:
 - `session_exists`: boolean
@@ -136,4 +157,9 @@ bash scripts/factory-self-check.sh
   - 정책을 완화하려면 `FACTORY_COMMAND_POLICY=permissive`를 명시한다.
 - `factory-night.sh`는 구조화 입력도 지원한다: `OMX_BIN` + `OMX_ARGS`를 주면 기존 `OMX_COMMAND`보다 우선한다.
 - `FACTORY_REQUIRE_STRUCTURED_INPUT=1`을 주면 `OMX_COMMAND` 경로를 막고 구조화 입력만 허용한다.
+- `factory-team.sh`는 `omx team`을 실행해 dedicated worktree 기반 병렬 lane을 띄운다.
+  - 기본 `4:executor` 스펙을 사용한다.
+  - 작업공간이 더러우면 기본적으로 `factory-night.sh`로 폴백한다.
+  - `FACTORY_TEAM_ALLOW_DIRTY=1`로 dirty workspace에서도 강제 실행할 수 있다.
+  - `FACTORY_TEAM_TASK` 또는 인자로 작업 지시를 넣어야 한다.
 - 런 로그(`run-*.log`), 감시 로그(`watch-*.log`), launch 스크립트(`launch-*.sh`)는 7일 초과 시 정리된다.

@@ -39,6 +39,7 @@ cp "${review_output_file}" .tmp-gemini-review.json
 
 echo "[INFO] Review complete. Results saved to ${review_output_file}"
 cat "${review_output_file}"
+node scripts/harness-event.mjs --event senior_review_complete --details "${review_output_file}" >/dev/null 2>&1 || true
 
 if [[ "${round}" == "2" ]]; then
   node scripts/review-gate.mjs --file "${review_output_file}" --final

@@ -27,4 +27,6 @@ portable-codex-starter/.github/hooks/logs/
 .omx/runs/
 .omx/logs/
 .omx/state/
+.omx/team/
+.omx/teams/
 .omx/metrics.json
