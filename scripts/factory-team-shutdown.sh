@@ -99,40 +99,45 @@ if [[ "${exit_code}" == "0" ]]; then
   shutdown_result="success"
 fi
 
+tmp_shutdown_state="$(mktemp "${shutdown_state_file}.XXXXXX")"
 node -e '
   const fs = require("fs");
   const path = process.argv[1];
+  const outputPath = process.argv[2];
   const payload = {
     schema_version: "1.0",
-    requested_at: process.argv[2],
-    finished_at: process.argv[3],
-    repo_path: process.argv[4],
-    session_name: process.argv[5],
-    team_name: process.argv[6],
-    team_name_hint: process.argv[7],
-    status: process.argv[8],
-    phase: process.argv[9],
-    force: process.argv[10] === "1",
-    confirm_issues: process.argv[11] === "1",
-    exit_code: Number(process.argv[12]),
-    result: process.argv[13],
-    log_file: process.argv[14],
-    meta_file: process.argv[15],
+    requested_at: process.argv[3],
+    finished_at: process.argv[4],
+    repo_path: process.argv[5],
+    session_name: process.argv[6],
+    team_name: process.argv[7],
+    team_name_hint: process.argv[8],
+    status: process.argv[9],
+    phase: process.argv[10],
+    force: process.argv[11] === "1",
+    confirm_issues: process.argv[12] === "1",
+    exit_code: Number(process.argv[13]),
+    result: process.argv[14],
+    log_file: process.argv[15],
+    meta_file: process.argv[16],
   };
-  fs.writeFileSync(path, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
-' "${shutdown_state_file}" "${REQUESTED_AT}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${meta_repo_path}" "${meta_session_name}" "${TEAM_NAME}" "${meta_team_name_hint}" "${meta_status}" "${meta_phase}" "${force_flag}" "${confirm_issues_flag}" "${exit_code}" "${shutdown_result}" "${shutdown_log}" "${META_FILE}"
+  fs.writeFileSync(outputPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+' "${tmp_shutdown_state}" "${REQUESTED_AT}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${meta_repo_path}" "${meta_session_name}" "${TEAM_NAME}" "${meta_team_name_hint}" "${meta_status}" "${meta_phase}" "${force_flag}" "${confirm_issues_flag}" "${exit_code}" "${shutdown_result}" "${shutdown_log}" "${META_FILE}" && mv -f "${tmp_shutdown_state}" "${shutdown_state_file}"
 
+
+tmp_meta="$(mktemp "${META_FILE}.XXXXXX")"
 node -e '
   const fs = require("fs");
   const path = process.argv[1];
-  const teamName = process.argv[2];
-  const status = process.argv[3];
-  const phase = process.argv[4];
-  const requestedAt = process.argv[5];
-  const finishedAt = process.argv[6];
-  const result = process.argv[7];
-  const logFile = process.argv[8];
-  const shutdownStateFile = process.argv[9];
+  const outputPath = process.argv[2];
+  const teamName = process.argv[3];
+  const status = process.argv[4];
+  const phase = process.argv[5];
+  const requestedAt = process.argv[6];
+  const finishedAt = process.argv[7];
+  const result = process.argv[8];
+  const logFile = process.argv[9];
+  const shutdownStateFile = process.argv[10];
   try {
     const payload = JSON.parse(fs.readFileSync(path, "utf8"));
     payload.last_update_at = finishedAt;
@@ -151,11 +156,12 @@ node -e '
     } else {
       payload.phase = "team_shutdown_failed";
     }
-    fs.writeFileSync(path, JSON.stringify(payload, null, 2) + "\n", "utf8");
+    fs.writeFileSync(outputPath, JSON.stringify(payload, null, 2) + "\n", "utf8");
   } catch {
     process.stderr.write("[WARN] failed to update team metadata after shutdown\n");
   }
-' "${META_FILE}" "${TEAM_NAME}" "${meta_status}" "${meta_phase}" "${REQUESTED_AT}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${shutdown_result}" "${shutdown_log}" "${shutdown_state_file}"
+' "${META_FILE}" "${tmp_meta}" "${TEAM_NAME}" "${meta_status}" "${meta_phase}" "${REQUESTED_AT}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${shutdown_result}" "${shutdown_log}" "${shutdown_state_file}" && mv -f "${tmp_meta}" "${META_FILE}"
+
 
 node scripts/harness-event.mjs --event factory_team_shutdown --details "${TEAM_NAME}:${shutdown_result}" >/dev/null 2>&1 || true
 

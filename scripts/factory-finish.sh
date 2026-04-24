@@ -157,24 +157,26 @@ else
   final_phase="finish_incomplete"
 fi
 
+tmp_meta="$(mktemp "${META_FILE}.XXXXXX")"
 node -e '
   const fs = require("fs");
   const path = process.argv[1];
-  const statusLabel = process.argv[2];
-  const phase = process.argv[3];
-  const finishedAtRaw = process.argv[4];
-  const poweroffReady = process.argv[5] === "true";
-  const remainingActions = JSON.parse(process.argv[6]);
-  const pushState = process.argv[7];
-  const reviewVerdict = process.argv[8];
-  const summaryPath = process.argv[9];
-  const repoPath = process.argv[10];
-  const branch = process.argv[11];
-  const teamShutdownResult = process.argv[12];
-  const teamShutdownRequestedAt = process.argv[13];
-  const teamShutdownFinishedAt = process.argv[14];
-  const teamShutdownLog = process.argv[15];
-  const teamShutdownStateFile = process.argv[16];
+  const outputPath = process.argv[2];
+  const statusLabel = process.argv[3];
+  const phase = process.argv[4];
+  const finishedAtRaw = process.argv[5];
+  const poweroffReady = process.argv[6] === "true";
+  const remainingActions = JSON.parse(process.argv[7] || "[]");
+  const pushState = process.argv[8];
+  const reviewVerdict = process.argv[9];
+  const summaryPath = process.argv[10];
+  const repoPath = process.argv[11];
+  const branch = process.argv[12];
+  const teamShutdownResult = process.argv[13];
+  const teamShutdownRequestedAt = process.argv[14];
+  const teamShutdownFinishedAt = process.argv[15];
+  const teamShutdownLog = process.argv[16];
+  const teamShutdownStateFile = process.argv[17];
   let payload = {};
   try {
     payload = JSON.parse(fs.readFileSync(path, "utf8"));
@@ -196,9 +198,10 @@ node -e '
   payload.team_shutdown_finished_at = teamShutdownFinishedAt || null;
   payload.team_shutdown_log = teamShutdownLog || null;
   payload.team_shutdown_state_file = teamShutdownStateFile || null;
-  fs.writeFileSync(path, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
-' "${META_FILE}" "${final_status_label}" "${final_phase}" "${finished_at_value}" "${poweroff_ready}" "${remaining_actions_json}" "${push_state}" "${last_review_verdict}" "${FINAL_SUMMARY_FILE}" "${ROOT_DIR}" "$(git branch --show-current 2>/dev/null || echo unknown)" "${team_shutdown_result}" "${team_shutdown_requested_at}" "${team_shutdown_finished_at}" "${team_shutdown_log}" "${TEAM_SHUTDOWN_STATE_FILE}"
+  fs.writeFileSync(outputPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+' "${META_FILE}" "${tmp_meta}" "${final_status_label}" "${final_phase}" "${finished_at_value}" "${poweroff_ready}" "${remaining_actions_json}" "${push_state}" "${last_review_verdict}" "${FINAL_SUMMARY_FILE}" "${ROOT_DIR}" "$(git branch --show-current 2>/dev/null || echo unknown)" "${team_shutdown_result}" "${team_shutdown_requested_at}" "${team_shutdown_finished_at}" "${team_shutdown_log}" "${TEAM_SHUTDOWN_STATE_FILE}" && mv -f "${tmp_meta}" "${META_FILE}"
 
+tmp_finish_state="$(mktemp "${FINISH_STATE_FILE}.XXXXXX")"
 node -e '
   const fs = require("fs");
   const outputPath = process.argv[1];
@@ -220,7 +223,7 @@ node -e '
     team_shutdown_state_file: process.argv[15]
   };
   fs.writeFileSync(outputPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
-' "${FINISH_STATE_FILE}" "${FINISHED_AT}" "${FINAL_SUMMARY_FILE}" "${push_attempted}" "${push_result}" "${push_error_summary}" "${push_state}" "${last_review_verdict}" "${poweroff_ready}" "${remaining_actions_json}" "${team_shutdown_result}" "${team_shutdown_requested_at}" "${team_shutdown_finished_at}" "${team_shutdown_log}" "${TEAM_SHUTDOWN_STATE_FILE}"
+' "${tmp_finish_state}" "${FINISHED_AT}" "${FINAL_SUMMARY_FILE}" "${push_attempted}" "${push_result}" "${push_error_summary}" "${push_state}" "${last_review_verdict}" "${poweroff_ready}" "${remaining_actions_json}" "${team_shutdown_result}" "${team_shutdown_requested_at}" "${team_shutdown_finished_at}" "${team_shutdown_log}" "${TEAM_SHUTDOWN_STATE_FILE}" && mv -f "${tmp_finish_state}" "${FINISH_STATE_FILE}"
 
 echo "[INFO] factory-finish complete."
 echo "[INFO] summary: ${FINAL_SUMMARY_FILE}"

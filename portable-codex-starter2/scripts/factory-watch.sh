@@ -32,15 +32,59 @@ WATCH_MAX_CYCLES="${WATCH_MAX_CYCLES:-0}"
 WATCH_LOG="${RUN_DIR}/watch-$(date -u +%Y%m%dT%H%M%SZ).log"
 ALERT_SNAPSHOT_FILE="${RUN_DIR}/latest-alert.json"
 META_FILE="${RUN_DIR}/latest-run.json"
+META_LOCK_DIR="${META_FILE}.lock.d"
 
 mkdir -p "${RUN_DIR}"
 omx_unavailable_count=0
 loop_suspect_count=0
 prev_log_size=""
-prev_checks_mtime=""
-prev_review_mtime=""
+prev_loop_signature=""
 cycle_count=0
 stop_requested=0
+
+artifact_fingerprint() {
+  local artifact_path="$1"
+  if [[ -z "${artifact_path}" || ! -f "${artifact_path}" ]]; then
+    printf '%s' ""
+    return 0
+  fi
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "${artifact_path}" | cut -d' ' -f1
+    return 0
+  fi
+  if command -v node >/dev/null 2>&1; then
+    node -e '
+      const fs = require("fs");
+      const crypto = require("crypto");
+      const path = process.argv[1];
+      try {
+        const hash = crypto.createHash("sha256");
+        hash.update(fs.readFileSync(path));
+        process.stdout.write(hash.digest("hex"));
+      } catch {
+        process.stdout.write("");
+      }
+    ' "${artifact_path}"
+    return 0
+  fi
+  stat -c '%s:%Y' "${artifact_path}"
+}
+
+acquire_meta_lock() {
+  local attempts=0
+  while ! mkdir "${META_LOCK_DIR}" 2>/dev/null; do
+    attempts=$((attempts + 1))
+    if (( attempts >= 100 )); then
+      echo "[ERROR] timed out waiting for meta lock: ${META_LOCK_DIR}" >&2
+      return 1
+    fi
+    sleep 0.1
+  done
+}
+
+release_meta_lock() {
+  rmdir "${META_LOCK_DIR}" 2>/dev/null || true
+}
 
 extract_json_field() {
   local json="$1"
@@ -85,7 +129,9 @@ write_alert_snapshot() {
   timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
   if command -v node >/dev/null 2>&1; then
-    node -e '
+    local tmp_alert
+    tmp_alert="$(mktemp "${ALERT_SNAPSHOT_FILE}.XXXXXX")"
+    if node -e '
       const fs = require("fs");
       const outputPath = process.argv[1];
       const cycle = Number(process.argv[2]);
@@ -116,7 +162,12 @@ write_alert_snapshot() {
         omx_status: status.omx_status ?? null
       };
       fs.writeFileSync(outputPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
-    ' "${ALERT_SNAPSHOT_FILE}" "${cycle_count}" "${reason_text}" "${severity}" "${suggested_action}" "${alert_code}" "${timestamp}" <<< "${status_json}"
+    ' "${tmp_alert}" "${cycle_count}" "${reason_text}" "${severity}" "${suggested_action}" "${alert_code}" "${timestamp}" <<< "${status_json}"; then
+      mv -f "${tmp_alert}" "${ALERT_SNAPSHOT_FILE}"
+    else
+      rm -f "${tmp_alert}"
+      return 1
+    fi
     return 0
   fi
 
@@ -153,20 +204,29 @@ update_run_state_on_alert() {
   if [[ ! -f "${META_FILE}" ]]; then
     return 0
   fi
-  node -e '
+  acquire_meta_lock || return 1
+  local tmp_meta
+  tmp_meta="$(mktemp "${META_FILE}.XXXXXX")"
+  if node -e '
     const fs = require("fs");
     const filePath = process.argv[1];
-    const status = process.argv[2];
-    const phase = process.argv[3];
+    const outputPath = process.argv[2];
+    const status = process.argv[3];
+    const phase = process.argv[4];
     try {
       const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
       parsed.status = status;
       parsed.phase = phase;
-      fs.writeFileSync(filePath, `${JSON.stringify(parsed, null, 2)}\n`, "utf8");
+      fs.writeFileSync(outputPath, `${JSON.stringify(parsed, null, 2)}\n`, "utf8");
     } catch {
-      process.exit(0);
+      process.exit(1);
     }
-  ' "${META_FILE}" "${next_status}" "${next_phase}"
+  ' "${META_FILE}" "${tmp_meta}" "${next_status}" "${next_phase}"; then
+    mv -f "${tmp_meta}" "${META_FILE}"
+  else
+    rm -f "${tmp_meta}"
+  fi
+  release_meta_lock
 }
 
 echo "[INFO] factory-watch started; events -> ${WATCH_LOG}" | tee -a "${WATCH_LOG}"
@@ -228,18 +288,16 @@ while true; do
 
   latest_checks="$(ls -1t .tmp-local-checks-round*.summary.json 2>/dev/null | head -n 1 || true)"
   latest_review="$(ls -1t .tmp-gemini-review-round*.json 2>/dev/null | head -n 1 || true)"
-  checks_mtime=""
-  review_mtime=""
-  [[ -n "${latest_checks}" && -f "${latest_checks}" ]] && checks_mtime="$(stat -c %Y "${latest_checks}")"
-  [[ -n "${latest_review}" && -f "${latest_review}" ]] && review_mtime="$(stat -c %Y "${latest_review}")"
+  checks_fingerprint="$(artifact_fingerprint "${latest_checks}")"
+  review_fingerprint="$(artifact_fingerprint "${latest_review}")"
+  loop_signature="${latest_checks}:${checks_fingerprint}|${latest_review}:${review_fingerprint}"
 
-  if [[ "${log_progress}" == "true" && "${checks_mtime}" == "${prev_checks_mtime}" && "${review_mtime}" == "${prev_review_mtime}" ]]; then
+  if [[ "${log_progress}" == "true" && "${loop_signature}" == "${prev_loop_signature}" ]]; then
     loop_suspect_count=$((loop_suspect_count + 1))
   else
     loop_suspect_count=0
   fi
-  prev_checks_mtime="${checks_mtime}"
-  prev_review_mtime="${review_mtime}"
+  prev_loop_signature="${loop_signature}"
 
   if (( loop_suspect_count >= SUSPECTED_LOOP_LIMIT )); then
     alert=1

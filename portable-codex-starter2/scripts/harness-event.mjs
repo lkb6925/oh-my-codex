@@ -46,7 +46,9 @@ if (existsSync(metaPath)) {
     meta.last_update_at = generatedAt;
     meta.last_event = eventName;
     meta.last_event_details = details || null;
-    await fs.writeFile(metaPath, `${JSON.stringify(meta, null, 2)}\n`, "utf8");
+    const tmpPath = `${metaPath}.${process.pid}.${Date.now()}.tmp`;
+    await fs.writeFile(tmpPath, `${JSON.stringify(meta, null, 2)}\n`, "utf8");
+    await fs.rename(tmpPath, metaPath);
   } catch {
     // keep event emission best-effort
   }

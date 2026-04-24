@@ -19,9 +19,12 @@ TEAM_FALLBACK="${FACTORY_TEAM_FALLBACK:-1}"
 TEAM_DRY_RUN="${FACTORY_TEAM_DRY_RUN:-0}"
 TEAM_AUTO_UPDATE="${FACTORY_TEAM_AUTO_UPDATE:-0}"
 TEAM_FALLBACK_COMMAND="${FACTORY_TEAM_FALLBACK_COMMAND:-bash scripts/factory-night.sh}"
+TEAM_MODE="omx-team"
 TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 RUN_LOG="${RUN_DIR}/team-${TIMESTAMP}.log"
 META_FILE="${RUN_DIR}/latest-run.json"
+META_LOCK_DIR="${META_FILE}.lock.d"
+EVENT_LOG="${RUN_DIR}/factory-team-events.log"
 LAUNCH_SCRIPT="${RUN_DIR}/launch-${TEAM_SESSION_NAME}.sh"
 
 mkdir -p "${RUN_DIR}"
@@ -109,9 +112,25 @@ if ! command -v tmux >/dev/null 2>&1; then
   exit 1
 fi
 
+script_help="$(script --help 2>&1 || true)"
+SCRIPT_EXIT_ARGS=()
+if [[ "${script_help}" == *" -e"* ]]; then
+  SCRIPT_EXIT_ARGS=(-e)
+fi
+
 TEAM_COMMAND_RENDERED="$(printf '%q ' omx team "${TEAM_SPEC_DEFAULT}" "${TEAM_TASK}")"
 TEAM_COMMAND_RENDERED="${TEAM_COMMAND_RENDERED% }"
 TEAM_TTY_COMMAND="env OMX_AUTO_UPDATE=$(printf '%q' "${TEAM_AUTO_UPDATE}") ${TEAM_COMMAND_RENDERED}"
+
+acquire_meta_lock() {
+  while ! mkdir "${META_LOCK_DIR}" 2>/dev/null; do
+    sleep 0.05
+  done
+}
+
+release_meta_lock() {
+  rmdir "${META_LOCK_DIR}" 2>/dev/null || true
+}
 
 if [[ "${TEAM_DRY_RUN}" == "1" ]]; then
   echo "[DRY-RUN] ${TEAM_TTY_COMMAND}"
@@ -123,12 +142,23 @@ cat > "${LAUNCH_SCRIPT}" <<LAUNCH
 set -Eeuo pipefail
 cd "${ROOT_DIR}"
 
+acquire_meta_lock() {
+  while ! mkdir "${META_LOCK_DIR}" 2>/dev/null; do
+    sleep 0.05
+  done
+}
+
+release_meta_lock() {
+  rmdir "${META_LOCK_DIR}" 2>/dev/null || true
+}
+
 update_meta() {
   local exit_code="\$1"
   local finished_at
   local final_status
   local final_phase
   local team_name=""
+  local tmp_meta=""
   finished_at="\$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   if [[ -d "${ROOT_DIR}/.omx/state/team" ]]; then
     team_name="\$(find "${ROOT_DIR}/.omx/state/team" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -n 1 | xargs -r basename 2>/dev/null || true)"
@@ -143,16 +173,19 @@ update_meta() {
     final_status="failed"
     final_phase="team_launch_failed"
   fi
-  node -e '
+  acquire_meta_lock
+  tmp_meta="\$(mktemp "${META_FILE}.XXXXXX")"
+  if node -e '
     const fs = require("fs");
-    const path = process.argv[1];
-    const status = process.argv[2];
-    const phase = process.argv[3];
-    const finishedAt = process.argv[4];
-    const exitCode = Number(process.argv[5]);
-    const teamName = process.argv[6];
+    const sourcePath = process.argv[1];
+    const outputPath = process.argv[2];
+    const status = process.argv[3];
+    const phase = process.argv[4];
+    const finishedAt = process.argv[5];
+    const exitCode = Number(process.argv[6]);
+    const teamName = process.argv[7];
     try {
-      const payload = JSON.parse(fs.readFileSync(path, "utf8"));
+      const payload = JSON.parse(fs.readFileSync(sourcePath, "utf8"));
       payload.status = status;
       payload.phase = phase;
       payload.finished_at = finishedAt;
@@ -160,17 +193,23 @@ update_meta() {
       if (teamName) {
         payload.team_name = teamName;
       }
-      fs.writeFileSync(path, JSON.stringify(payload, null, 2) + "\n", "utf8");
+      fs.writeFileSync(outputPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
     } catch {
       process.stderr.write("[WARN] failed to update team metadata\n");
+      process.exit(1);
     }
-  ' "${META_FILE}" "\${final_status}" "\${final_phase}" "\${finished_at}" "\${exit_code}" "\${team_name}"
+  ' "${META_FILE}" "${tmp_meta}" "\${final_status}" "\${final_phase}" "\${finished_at}" "\${exit_code}" "\${team_name}"; then
+    mv -f "${tmp_meta}" "${META_FILE}"
+  else
+    rm -f "${tmp_meta}"
+  fi
+  release_meta_lock
 }
 
 trap 'rc=\$?; update_meta "\$rc"' EXIT
 
 echo "[INFO] factory-team start \$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "${RUN_LOG}"
-script -q -f -a -e -c "${TEAM_TTY_COMMAND}" "${RUN_LOG}"
+script -q -f -a "${SCRIPT_EXIT_ARGS[@]}" -c "${TEAM_TTY_COMMAND}" "${RUN_LOG}"
 LAUNCH
 chmod +x "${LAUNCH_SCRIPT}"
 

@@ -144,24 +144,27 @@ update_meta() {
     final_status="failed"
     final_phase="launch_failed"
   fi
+  local tmp_meta
+  tmp_meta="$(mktemp "${META_FILE}.XXXXXX")"
   node -e '
     const fs = require("fs");
     const path = process.argv[1];
-    const status = process.argv[2];
-    const phase = process.argv[3];
-    const finishedAt = process.argv[4];
-    const exitCode = Number(process.argv[5]);
+    const outputPath = process.argv[2];
+    const status = process.argv[3];
+    const phase = process.argv[4];
+    const finishedAt = process.argv[5];
+    const exitCode = Number(process.argv[6]);
     try {
       const payload = JSON.parse(fs.readFileSync(path, "utf8"));
       payload.status = status;
       payload.phase = phase;
       payload.finished_at = finishedAt;
       payload.exit_code = exitCode;
-      fs.writeFileSync(path, JSON.stringify(payload, null, 2) + "\n", "utf8");
+      fs.writeFileSync(outputPath, JSON.stringify(payload, null, 2) + "\n", "utf8");
     } catch {
       process.stderr.write("[WARN] failed to update launch metadata\n");
     }
-  ' "${META_FILE}" "\${final_status}" "\${final_phase}" "\${finished_at}" "\${exit_code}"
+  ' "${META_FILE}" "${tmp_meta}" "\${final_status}" "\${final_phase}" "\${finished_at}" "\${exit_code}" && mv -f "${tmp_meta}" "${META_FILE}"
 }
 
 trap 'rc=\$?; update_meta "\$rc"' EXIT
@@ -173,7 +176,8 @@ chmod +x "${LAUNCH_SCRIPT}"
 
 tmux new-session -d -s "${SESSION_NAME}" "bash '${LAUNCH_SCRIPT}'"
 
-cat > "${META_FILE}" <<JSON
+tmp_meta="$(mktemp "${META_FILE}.XXXXXX")"
+cat > "${tmp_meta}" <<JSON
 {
   "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "repo_path": "${ROOT_DIR}",
@@ -195,6 +199,7 @@ cat > "${META_FILE}" <<JSON
   "execution_mode": "tmux"
 }
 JSON
+mv -f "${tmp_meta}" "${META_FILE}"
 
 echo "[INFO] factory-night session started: ${SESSION_NAME}"
 echo "[INFO] run log: ${RUN_LOG}"
