@@ -11,7 +11,6 @@ TEAM_RUNTIME_ROOT="${FACTORY_TEAM_RUNTIME_ROOT:-${XDG_RUNTIME_DIR:-/tmp}/factory
 RUN_DIR="${TEAM_RUNTIME_ROOT}/${ROOT_NAME}"
 TEAM_SPEC_DEFAULT="${FACTORY_TEAM_SPEC:-4:executor}"
 TEAM_SESSION_NAME="${FACTORY_TEAM_SESSION_NAME:-factory-team-${ROOT_NAME}}"
-TEAM_NAME_HINT="${FACTORY_TEAM_NAME_HINT:-${TEAM_SESSION_NAME}}"
 TEAM_TASK_FILE="${FACTORY_TEAM_TASK_FILE:-}"
 TEAM_TASK="${FACTORY_TEAM_TASK:-}"
 TEAM_ALLOW_DIRTY="${FACTORY_TEAM_ALLOW_DIRTY:-0}"
@@ -70,6 +69,12 @@ if [[ -z "${TEAM_TASK}" ]]; then
   echo "[ERROR] missing team task. Set FACTORY_TEAM_TASK or pass a task string." >&2
   echo "[HINT] Example: FACTORY_TEAM_TASK='fix tests and stage review lane' bash scripts/factory-team.sh" >&2
   exit 1
+fi
+
+TEAM_NIGHT_TASK_FILE="${RUN_DIR}/night-factory-task-${TIMESTAMP}.txt"
+printf '%s' "${TEAM_TASK}" > "${TEAM_NIGHT_TASK_FILE}"
+if [[ "${TEAM_FALLBACK_COMMAND}" == "bash scripts/factory-night.sh" ]]; then
+  TEAM_FALLBACK_COMMAND="FACTORY_NIGHT_TASK_FILE=${TEAM_NIGHT_TASK_FILE} bash scripts/factory-night.sh"
 fi
 
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -215,13 +220,13 @@ chmod +x "${LAUNCH_SCRIPT}"
 
 tmux new-session -d -s "${TEAM_SESSION_NAME}" "bash '${LAUNCH_SCRIPT}'"
 
+
 cat > "${META_FILE}" <<JSON
 {
   "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "repo_path": "${ROOT_DIR}",
   "branch": "$(git branch --show-current 2>/dev/null || echo unknown)",
   "session_name": "${TEAM_SESSION_NAME}",
-  "team_name_hint": "${TEAM_NAME_HINT}",
   "status": "running",
   "phase": "launched",
   "finished_at": null,

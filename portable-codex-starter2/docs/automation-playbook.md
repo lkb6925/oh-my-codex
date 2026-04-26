@@ -11,10 +11,10 @@
 
 ## 운영 레이어 (overnight harness)
 
-- `scripts/factory-night.sh`: 야간 실행 엔트리포인트 (tmux + OMX)
+- `scripts/factory-night.sh`: 야간 실행 엔트리포인트 (tmux + OMX; 기본은 `omx exec` 기반의 무대화면 없는 작업 모드, `FACTORY_NIGHT_TASK`/`FACTORY_NIGHT_TASK_FILE`/인자 지원, 기본은 agent-only)
 - `scripts/factory-status.sh`: 상태 확인(사람/기계 겸용, `--json` 지원)
 - `scripts/factory-watch.sh`: 읽기 전용 감시/알림
-- `scripts/factory-summary.sh`: 아침 점검용 요약 리포트
+- `scripts/factory-summary.sh`: 아침 점검용 요약 리포트 (`DONE` / `KEEP / PRUNE CANDIDATES` / `NEEDS YOUR DECISION` / `MACHINE / OPERATIONS`)
 - `scripts/factory-finish.sh`: 최종 push/요약/종료 준비 상태 계산
 - `scripts/factory-team.sh`: `omx team` 기반의 병렬 worktree lane 런처(깨끗한 repo일 때 우선 사용)
 - `scripts/factory-team-status.sh`: team 상태 조회
@@ -131,8 +131,6 @@ bash scripts/factory-self-check.sh
 - `remaining_manual_actions`
 - `execution_mode` (`tmux` | `omx-team` | `fallback`)
 - `team_spec`
-- `team_name_hint`
-- `team_fallback_command`
 - `team_name`
 
 타입 규칙:
@@ -157,11 +155,9 @@ bash scripts/factory-self-check.sh
   - `--unsafe`, `--danger`, `--destructive`, `--no-sandbox` 패턴은 차단된다.
   - 비-`omx` 명령을 의도적으로 허용하려면 `FACTORY_ALLOW_NON_OMX_COMMAND=1`을 설정한다.
   - 정책을 완화하려면 `FACTORY_COMMAND_POLICY=permissive`를 명시한다.
-- `factory-night.sh`는 구조화 입력도 지원한다: `OMX_BIN` + `OMX_ARGS`를 주면 기존 `OMX_COMMAND`보다 우선한다.
+- `factory-night.sh`는 기본 backend가 `omx team`이다. `FACTORY_NIGHT_TASK`/`FACTORY_NIGHT_TASK_FILE`/인자를 지원하며, 필요할 때만 `FACTORY_NIGHT_EXEC_MODE=exec`로 직접 exec 경로를 쓴다.
 - `FACTORY_REQUIRE_STRUCTURED_INPUT=1`을 주면 `OMX_COMMAND` 경로를 막고 구조화 입력만 허용한다.
 - `factory-team.sh`는 `omx team`을 실행해 dedicated worktree 기반 병렬 lane을 띄운다.
   - 기본 `4:executor` 스펙을 사용한다.
-  - 작업공간이 더러우면 기본적으로 `factory-night.sh`로 폴백한다.
-  - `FACTORY_TEAM_ALLOW_DIRTY=1`로 dirty workspace에서도 강제 실행할 수 있다.
   - `FACTORY_TEAM_TASK` 또는 인자로 작업 지시를 넣어야 한다.
 - 런 로그(`run-*.log`), 감시 로그(`watch-*.log`), launch 스크립트(`launch-*.sh`)는 7일 초과 시 정리된다.

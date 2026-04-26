@@ -119,27 +119,63 @@ meta_status=""
 meta_last_update_at=""
 meta_last_event=""
 meta_execution_mode=""
+meta_agent_alive=""
 meta_team_spec=""
-meta_team_name_hint=""
 meta_team_name=""
-meta_team_fallback_command=""
+meta_night_mode=""
+meta_night_team_spec=""
+team_probe_status=""
+run_state="idle"
 if [[ -f "${META_FILE}" ]]; then
   meta_status="$(json_field_from_file "${META_FILE}" "status")"
   meta_last_update_at="$(json_field_from_file "${META_FILE}" "last_update_at")"
   meta_last_event="$(json_field_from_file "${META_FILE}" "last_event")"
   meta_execution_mode="$(json_field_from_file "${META_FILE}" "execution_mode")"
+  meta_agent_alive="$(json_field_from_file "${META_FILE}" "agent_alive")"
   meta_team_spec="$(json_field_from_file "${META_FILE}" "team_spec")"
-  meta_team_name_hint="$(json_field_from_file "${META_FILE}" "team_name_hint")"
   meta_team_name="$(json_field_from_file "${META_FILE}" "team_name")"
-  meta_team_fallback_command="$(json_field_from_file "${META_FILE}" "team_fallback_command")"
+  meta_night_mode="$(json_field_from_file "${META_FILE}" "night_mode")"
+  meta_night_team_spec="$(json_field_from_file "${META_FILE}" "night_team_spec")"
 fi
-run_state="idle"
-if [[ "${session_exists}" == "true" ]]; then
-  run_state="running"
-elif [[ -n "${meta_status}" ]]; then
+if [[ -z "${meta_agent_alive}" ]]; then
+  meta_agent_alive="${session_exists}"
+fi
+if [[ "${meta_execution_mode}" == "team" && -n "${meta_team_name}" ]] && command -v omx >/dev/null 2>&1; then
+  team_probe_status="$(timeout 5 omx team status "${meta_team_name}" --json 2>/dev/null | node -e '
+    let raw = "";
+    process.stdin.on("data", (c) => raw += c);
+    process.stdin.on("end", () => {
+      try {
+        const obj = JSON.parse(raw);
+        process.stdout.write(String(obj.status || ""));
+      } catch {
+        process.stdout.write("");
+      }
+    });
+  ' 2>/dev/null || true)"
+fi
+if [[ -n "${meta_status}" && "${meta_status}" != "running" ]]; then
   run_state="${meta_status}"
+elif [[ "${meta_execution_mode}" == "team" && -n "${team_probe_status}" ]]; then
+  case "${team_probe_status}" in
+    running|launched|active)
+      run_state="running"
+      ;;
+    completed|done|success)
+      run_state="completed"
+      ;;
+    missing)
+      if [[ "${session_exists}" == "true" ]]; then
+        run_state="running"
+      else
+        run_state="stalled"
+      fi
+      ;;
+  esac
+elif [[ "${meta_agent_alive}" == "true" ]]; then
+  run_state="running"
 fi
-if [[ "${session_exists}" != "true" && "${run_state}" == "running" ]]; then
+if [[ "${meta_status}" == "running" && "${meta_agent_alive}" != "true" ]]; then
   run_state="stalled"
 fi
 
@@ -163,7 +199,7 @@ if [[ "${last_review_verdict}" == "unknown" ]]; then
 elif [[ "${last_review_verdict}" != "approved" && "${last_review_verdict}" != "pass" ]]; then
   remaining_actions+=("resolve_review_findings")
 fi
-if [[ "${session_exists}" == "true" ]]; then
+if [[ "${meta_agent_alive}" == "true" ]]; then
   remaining_actions+=("stop_factory_session")
 fi
 
@@ -205,12 +241,12 @@ if [[ "${JSON_MODE}" == "1" ]]; then
       remaining_manual_actions: JSON.parse(process.argv[20] || "[]"),
       execution_mode: process.argv[21],
       team_spec: process.argv[22],
-      team_name_hint: process.argv[23],
-      team_name: process.argv[24],
-      team_fallback_command: process.argv[25]
+      team_name: process.argv[23],
+      night_mode: process.argv[24],
+      night_team_spec: process.argv[25]
     };
     process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-  ' "${generated_at}" "${run_state}" "${SESSION_NAME}" "${session_exists}" "${branch}" "${dirty}" "${latest_commit}" "${latest_log}" "${log_age_seconds}" "${META_FILE}" "${meta_age_seconds}" "${omx_status}" "${push_state}" "${last_review_verdict}" "${last_alert_file}" "${last_alert_severity}" "${last_alert_code}" "${poweroff_ready}" "${REQUIRE_REVIEW_FOR_POWEROFF}" "${remaining_actions_json}" "${meta_execution_mode}" "${meta_team_spec}" "${meta_team_name_hint}" "${meta_team_name}" "${meta_team_fallback_command}"
+  ' "${generated_at}" "${run_state}" "${SESSION_NAME}" "${session_exists}" "${branch}" "${dirty}" "${latest_commit}" "${latest_log}" "${log_age_seconds}" "${META_FILE}" "${meta_age_seconds}" "${omx_status}" "${push_state}" "${last_review_verdict}" "${last_alert_file}" "${last_alert_severity}" "${last_alert_code}" "${poweroff_ready}" "${REQUIRE_REVIEW_FOR_POWEROFF}" "${remaining_actions_json}" "${meta_execution_mode}" "${meta_team_spec}" "${meta_team_name}" "${meta_night_mode}" "${meta_night_team_spec}"
   exit 0
 fi
 
@@ -226,10 +262,10 @@ echo "  meta_age_seconds: ${meta_age_seconds:-n/a}"
 echo "  last_update_at: ${meta_last_update_at:-n/a}"
 echo "  last_event: ${meta_last_event:-n/a}"
 echo "  execution_mode: ${meta_execution_mode:-n/a}"
+echo "  night_mode: ${meta_night_mode:-n/a}"
+echo "  night_team_spec: ${meta_night_team_spec:-n/a}"
 echo "  team_spec: ${meta_team_spec:-n/a}"
-echo "  team_name_hint: ${meta_team_name_hint:-n/a}"
 echo "  team_name: ${meta_team_name:-n/a}"
-echo "  team_fallback_command: ${meta_team_fallback_command:-n/a}"
 echo "  omx_status: ${omx_status}"
 echo "  push_state: ${push_state}"
 echo "  last_review_verdict: ${last_review_verdict}"

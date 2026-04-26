@@ -49,7 +49,6 @@ write_json_file() {
 meta_repo_path="$(read_meta_field repo_path)"
 meta_session_name="$(read_meta_field session_name)"
 meta_team_name="$(read_meta_field team_name)"
-meta_team_name_hint="$(read_meta_field team_name_hint)"
 meta_status="$(read_meta_field status)"
 meta_phase="$(read_meta_field phase)"
 
@@ -57,9 +56,9 @@ if [[ -n "${meta_repo_path}" && -d "${meta_repo_path}" ]]; then
   cd "${meta_repo_path}"
 fi
 
-TEAM_NAME="${1:-${FACTORY_TEAM_SESSION_NAME:-${meta_team_name:-${meta_team_name_hint:-factory-team-${ROOT_NAME}}}}}"
+TEAM_NAME="${1:-${FACTORY_TEAM_SESSION_NAME:-${meta_team_name:-${meta_session_name:-factory-team-${ROOT_NAME}}}}}"
 if [[ "${1:-}" == "--json" ]]; then
-  TEAM_NAME="${FACTORY_TEAM_SESSION_NAME:-${meta_team_name:-${meta_team_name_hint:-factory-team-${ROOT_NAME}}}}"
+  TEAM_NAME="${FACTORY_TEAM_SESSION_NAME:-${meta_team_name:-${meta_session_name:-factory-team-${ROOT_NAME}}}}"
 fi
 
 if [[ -z "${TEAM_NAME}" ]]; then
@@ -111,18 +110,17 @@ node -e '
     repo_path: process.argv[5],
     session_name: process.argv[6],
     team_name: process.argv[7],
-    team_name_hint: process.argv[8],
-    status: process.argv[9],
-    phase: process.argv[10],
-    force: process.argv[11] === "1",
-    confirm_issues: process.argv[12] === "1",
-    exit_code: Number(process.argv[13]),
-    result: process.argv[14],
-    log_file: process.argv[15],
-    meta_file: process.argv[16],
+    status: process.argv[8],
+    phase: process.argv[9],
+    force: process.argv[10] === "1",
+    confirm_issues: process.argv[11] === "1",
+    exit_code: Number(process.argv[12]),
+    result: process.argv[13],
+    log_file: process.argv[14],
+    meta_file: process.argv[15],
   };
   fs.writeFileSync(outputPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
-' "${tmp_shutdown_state}" "${REQUESTED_AT}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${meta_repo_path}" "${meta_session_name}" "${TEAM_NAME}" "${meta_team_name_hint}" "${meta_status}" "${meta_phase}" "${force_flag}" "${confirm_issues_flag}" "${exit_code}" "${shutdown_result}" "${shutdown_log}" "${META_FILE}" && mv -f "${tmp_shutdown_state}" "${shutdown_state_file}"
+' "${tmp_shutdown_state}" "${REQUESTED_AT}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${meta_repo_path}" "${meta_session_name}" "${TEAM_NAME}" "${meta_status}" "${meta_phase}" "${force_flag}" "${confirm_issues_flag}" "${exit_code}" "${shutdown_result}" "${shutdown_log}" "${META_FILE}" && mv -f "${tmp_shutdown_state}" "${shutdown_state_file}"
 
 
 tmp_meta="$(mktemp "${META_FILE}.XXXXXX")"

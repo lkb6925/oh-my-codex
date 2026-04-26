@@ -39,6 +39,7 @@ Bash, Node.js ESM scripts, tmux, git, jq, existing OMX/Hermes/Codex scripts, opt
   - `factory:finish` = finalization / push / shutdown
 - Add a short “when to use which command” section.
 - Clarify that `factory-night` is for autonomous execution, while the other commands are read-only or finishing operations.
+- State explicitly that overnight runs should not emit conversational turn-end replies while work is still in progress; they should keep acting until complete or genuinely blocked.
 
 **Verification:**
 - Read the docs and ensure the lifecycle is explainable in under 1 minute.
