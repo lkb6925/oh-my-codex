@@ -31,6 +31,7 @@ Portable skills live under `.agents/skills/`.
 - Verify before claiming done.
 - Default to compact, information-dense responses unless risk or the user asks for detail.
 - Continue automatically through clear, low-risk, reversible next steps.
+- Coding and implementation work must run through omx/oh-my-codex; Hermes orchestrates, inspects, and reports rather than making direct edits.
 - Base persistence on the current execution budget: if the session allows many reversible attempts, keep pushing; if retries are limited or the branch is ambiguous, ask sooner.
 - Prefer tools that are actually available in the current session; verify optional tools before relying on them.
 - Use the minimum number of external tools needed for the task.

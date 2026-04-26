@@ -13,11 +13,12 @@ TEAM_SPEC_DEFAULT="${FACTORY_TEAM_SPEC:-4:executor}"
 TEAM_SESSION_NAME="${FACTORY_TEAM_SESSION_NAME:-factory-team-${ROOT_NAME}}"
 TEAM_TASK_FILE="${FACTORY_TEAM_TASK_FILE:-}"
 TEAM_TASK="${FACTORY_TEAM_TASK:-}"
+# Fail closed by default. Explicit opt-ins:
+# - FACTORY_TEAM_ALLOW_DIRTY=1 permits a dirty worktree.
+# - FACTORY_TEAM_DRY_RUN=1 prints the omx team command without launching.
 TEAM_ALLOW_DIRTY="${FACTORY_TEAM_ALLOW_DIRTY:-0}"
-TEAM_FALLBACK="${FACTORY_TEAM_FALLBACK:-1}"
 TEAM_DRY_RUN="${FACTORY_TEAM_DRY_RUN:-0}"
 TEAM_AUTO_UPDATE="${FACTORY_TEAM_AUTO_UPDATE:-0}"
-TEAM_FALLBACK_COMMAND="${FACTORY_TEAM_FALLBACK_COMMAND:-bash scripts/factory-night.sh}"
 TEAM_MODE="omx-team"
 TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 RUN_LOG="${RUN_DIR}/team-${TIMESTAMP}.log"
@@ -52,10 +53,6 @@ if [[ "$#" -gt 0 ]]; then
       fi
       TEAM_TASK="$(cat "${TEAM_TASK_FILE}")"
     fi
-  elif [[ "${1:-}" == "--fallback" ]]; then
-    shift
-    TEAM_FALLBACK_COMMAND="${1:-${TEAM_FALLBACK_COMMAND}}"
-    shift || true
   fi
 fi
 
@@ -73,8 +70,13 @@ fi
 
 TEAM_NIGHT_TASK_FILE="${RUN_DIR}/night-factory-task-${TIMESTAMP}.txt"
 printf '%s' "${TEAM_TASK}" > "${TEAM_NIGHT_TASK_FILE}"
-if [[ "${TEAM_FALLBACK_COMMAND}" == "bash scripts/factory-night.sh" ]]; then
-  TEAM_FALLBACK_COMMAND="FACTORY_NIGHT_TASK_FILE=${TEAM_NIGHT_TASK_FILE} bash scripts/factory-night.sh"
+TEAM_COMMAND_RENDERED="$(printf '%q ' omx team "${TEAM_SPEC_DEFAULT}" "${TEAM_TASK}")"
+TEAM_COMMAND_RENDERED="${TEAM_COMMAND_RENDERED% }"
+TEAM_TTY_COMMAND="env OMX_AUTO_UPDATE=$(printf '%q' "${TEAM_AUTO_UPDATE}") ${TEAM_COMMAND_RENDERED}"
+
+if [[ "${TEAM_DRY_RUN}" == "1" ]]; then
+  echo "[DRY-RUN] ${TEAM_TTY_COMMAND}"
+  exit 0
 fi
 
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -88,22 +90,12 @@ if [[ -n "$(git status --short 2>/dev/null)" ]]; then
 fi
 
 if [[ "${working_tree_dirty}" == "1" && "${TEAM_ALLOW_DIRTY}" != "1" ]]; then
-  if [[ "${TEAM_FALLBACK}" == "1" ]]; then
-    echo "[WARN] working tree is dirty; falling back to: ${TEAM_FALLBACK_COMMAND}" >&2
-    node scripts/harness-event.mjs --event factory_team_fallback --details "dirty-working-tree -> ${TEAM_FALLBACK_COMMAND}" >/dev/null 2>&1 || true
-    exec bash -lc "${TEAM_FALLBACK_COMMAND}"
-  fi
-  echo "[ERROR] working tree is dirty. Commit/stash first or set FACTORY_TEAM_ALLOW_DIRTY=1." >&2
+  echo "[ERROR] working tree is dirty; factory-team requires a clean tree unless FACTORY_TEAM_ALLOW_DIRTY=1." >&2
   exit 1
 fi
 
 if ! command -v omx >/dev/null 2>&1; then
-  if [[ "${TEAM_FALLBACK}" == "1" ]]; then
-    echo "[WARN] omx not found; falling back to: ${TEAM_FALLBACK_COMMAND}" >&2
-    node scripts/harness-event.mjs --event factory_team_fallback --details "missing-omx -> ${TEAM_FALLBACK_COMMAND}" >/dev/null 2>&1 || true
-    exec bash -lc "${TEAM_FALLBACK_COMMAND}"
-  fi
-  echo "[ERROR] omx is not available on PATH." >&2
+  echo "[ERROR] omx is not available on PATH; factory-team will not fall back to non-omx execution." >&2
   exit 1
 fi
 
@@ -123,10 +115,6 @@ if [[ "${script_help}" == *" -e"* ]]; then
   SCRIPT_EXIT_ARGS=(-e)
 fi
 
-TEAM_COMMAND_RENDERED="$(printf '%q ' omx team "${TEAM_SPEC_DEFAULT}" "${TEAM_TASK}")"
-TEAM_COMMAND_RENDERED="${TEAM_COMMAND_RENDERED% }"
-TEAM_TTY_COMMAND="env OMX_AUTO_UPDATE=$(printf '%q' "${TEAM_AUTO_UPDATE}") ${TEAM_COMMAND_RENDERED}"
-
 acquire_meta_lock() {
   while ! mkdir "${META_LOCK_DIR}" 2>/dev/null; do
     sleep 0.05
@@ -136,11 +124,6 @@ acquire_meta_lock() {
 release_meta_lock() {
   rmdir "${META_LOCK_DIR}" 2>/dev/null || true
 }
-
-if [[ "${TEAM_DRY_RUN}" == "1" ]]; then
-  echo "[DRY-RUN] ${TEAM_TTY_COMMAND}"
-  exit 0
-fi
 
 cat > "${LAUNCH_SCRIPT}" <<LAUNCH
 #!/usr/bin/env bash
