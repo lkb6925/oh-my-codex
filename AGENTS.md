@@ -35,6 +35,7 @@ Portable skills live under `.agents/skills/`.
 - Base persistence on the current execution budget: if the session allows many reversible attempts, keep pushing; if retries are limited or the branch is ambiguous, ask sooner.
 - Prefer tools that are actually available in the current session; verify optional tools before relying on them.
 - Use the minimum number of external tools needed for the task.
+- AGENTS/skills/system instructions are the already-loaded operating contract, not user memory; memory is only for user-specific stable preferences and environment facts.
 - Verification gate: after deployment or a user-visible runtime fix, confirm the main flow runs without errors using the strongest practical evidence available in the session.
 </operating_principles>
 

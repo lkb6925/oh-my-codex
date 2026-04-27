@@ -27,7 +27,11 @@
 - cloud hook/workflow 계층은 넣지 않고 VM 로컬 운영 스크립트에 집중한다.
 - 독립 작업은 병렬 worktree/worker 우선으로 처리하고, 파일이 겹칠 때만 직렬로 묶는다.
 - 작업공간이 깨끗하면 `omx team`을 우선 고려한다. 팀 모드는 dedicated worktree를 자동으로 사용해 병렬 lane 관리에 유리하다.
-- `watch`는 감시, `summary`는 상태 브리핑, `finish`는 마감/종료 처리다.
+- AGENTS/skills/system instructions are the already-loaded operating contract, not user memory; memory is only for user-specific stable preferences and environment facts.
+- 한 줄 사용법: 낮엔 `factory`, 밤엔 `factory-night "할 일"`, 그리고 자면 된다.
+- `factory`는 아침 브리핑 명령이다. 상태 + 요약을 한 번에 보여준다.
+- `factory-night`는 밤 자동 실행 명령이다. 기본은 team lane이다.
+- `factory-team`은 `factory-night`의 team 래퍼다. 밤의 병렬 lane 진입점으로 쓰고, 낮의 대화형 모드와는 분리한다.
 - `factory:team`은 `omx team` 기반의 병렬 worktree lane 런처다. 작업공간이 깨끗할 때 우선 쓴다.
 - `factory:team:shutdown`은 팀 세션을 종료하고 런타임 정리 상태를 남긴다.
 ## 역할 분리 (중요)
@@ -117,6 +121,7 @@ node scripts/doctor.mjs --target /path/to/your-project --skills-root=.codex
 
 ```bash
 npm run vm:preflight
+npm run factory
 npm run factory:night
 npm run factory:watch
 npm run factory:summary
@@ -125,6 +130,7 @@ npm run factory:status
 ```
 
 운영 의미:
+- `factory` = 아침 브리핑(상태 + 요약)
 - `factory:night` = 실행 시작
 - `factory:watch` = 감시/알림
 - `factory:summary` = 현재 상태 요약
