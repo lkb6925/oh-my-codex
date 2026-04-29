@@ -11,7 +11,8 @@ const packRoot = resolve(__dirname, "..");
 const args = parseArgs(process.argv.slice(2));
 const target = resolve(args.target || process.cwd());
 const coreOnly = Boolean(args["core-only"]);
-const skillsRoot = args["skills-root"] || ".agents";
+const withAgents = Boolean(args["with-agents"]);
+const skillsRoot = args["skills-root"] ? String(args["skills-root"]) : "none";
 const checkingPackRoot = target === packRoot;
 
 const expected = {
@@ -22,7 +23,6 @@ const expected = {
 const checks = [];
 
 checks.push(checkExists("AGENTS.md", join(target, "AGENTS.md")));
-checks.push(checkExists(".codex/agents", join(target, ".codex", "agents")));
 
 const agentsPath = join(target, ".codex", "agents");
 const agentsSkillsPath = join(target, ".agents", "skills");
@@ -48,10 +48,28 @@ const agentCount = await countAgentFiles(agentsPath);
 const agentsSkillScan = await inspectSkillDirectories(agentsSkillsPath);
 const codexSkillScan = await inspectSkillDirectories(codexSkillsPath);
 
+if (withAgents) {
+  checks.push(checkExists(".codex/agents", agentsPath));
+  checks.push({
+    name: "starter agent count",
+    ok: agentCount === expected.agents,
+    detail: `${agentCount}/${expected.agents}`,
+  });
+} else {
+  checks.push({
+    name: ".codex/agents overlay",
+    ok: true,
+    optional: true,
+    detail: existsSync(agentsPath)
+      ? `preserved existing agents (${agentCount} TOML files); use --with-agents to enforce starter examples`
+      : "not installed; overlay mode uses existing OMX/Codex agents when present",
+  });
+}
+
 if (skillsRoot === ".agents") {
   checks.push(checkExists(".agents/skills", agentsSkillsPath));
   checks.push({
-    name: "skill count",
+    name: "starter skill count",
     ok: agentsSkillScan.count >= expected.skills,
     detail: `${agentsSkillScan.count} (minimum ${expected.skills}) in .agents/skills`,
   });
@@ -59,7 +77,7 @@ if (skillsRoot === ".agents") {
 } else if (skillsRoot === ".codex") {
   checks.push(checkExists(".codex/skills", codexSkillsPath));
   checks.push({
-    name: "skill count",
+    name: "starter skill count",
     ok: codexSkillScan.count >= expected.skills,
     detail: `${codexSkillScan.count} (minimum ${expected.skills}) in .codex/skills`,
   });
@@ -68,17 +86,24 @@ if (skillsRoot === ".agents") {
   checks.push(checkExists(".agents/skills", agentsSkillsPath));
   checks.push(checkExists(".codex/skills", codexSkillsPath));
   checks.push({
-    name: "skill count (.agents)",
+    name: "starter skill count (.agents)",
     ok: agentsSkillScan.count >= expected.skills,
     detail: `${agentsSkillScan.count} (minimum ${expected.skills})`,
   });
   checks.push({
-    name: "skill count (.codex)",
+    name: "starter skill count (.codex)",
     ok: codexSkillScan.count >= expected.skills,
     detail: `${codexSkillScan.count} (minimum ${expected.skills})`,
   });
   checks.push(checkOptionalIssues(".agents/skills structure", agentsSkillScan.issues));
   checks.push(checkOptionalIssues(".codex/skills structure", codexSkillScan.issues));
+} else if (skillsRoot === "none") {
+  checks.push({
+    name: "skills overlay",
+    ok: true,
+    optional: true,
+    detail: existingSkillDetail(agentsSkillScan, codexSkillScan),
+  });
 } else {
   checks.push({
     name: "skills-root",
@@ -88,11 +113,6 @@ if (skillsRoot === ".agents") {
   });
 }
 
-checks.push({
-  name: "agent count",
-  ok: agentCount === expected.agents,
-  detail: `${agentCount}/${expected.agents}`,
-});
 checks.push(checkOptional("config.toml", configPath));
 checks.push(checkOptional("config.toml.example", configExamplePath));
 checks.push(checkOptional("mcp-servers.example.toml", mcpExamplePath));
@@ -244,6 +264,15 @@ async function inspectSkillDirectories(path) {
     }
   }
   return { count, issues };
+}
+
+function existingSkillDetail(agentsSkillScan, codexSkillScan) {
+  const details = [];
+  if (agentsSkillScan.count > 0) details.push(`.agents/skills has ${agentsSkillScan.count}`);
+  if (codexSkillScan.count > 0) details.push(`.codex/skills has ${codexSkillScan.count}`);
+  return details.length > 0
+    ? `preserved existing skills (${details.join(", ")}); use --with-skills or --skills-root to enforce starter examples`
+    : "not installed; overlay mode uses existing OMX/Codex skills when present";
 }
 
 async function readTextIfExists(path) {

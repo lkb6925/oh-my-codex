@@ -10,8 +10,8 @@ Use this starter as a repository-local Codex operating pack.
 ## What it provides
 
 - `AGENTS.md` for top-level behavior
-- custom agents under `.codex/agents/`
-- portable skills under `.agents/skills/`
+- overlay launchers and scripts (`factory`, `factory-night`, status/handoff tools)
+- existing OMX/Codex agents and skills preserved by default
 - prompt sources under `prompts/`
 
 ## What it does not provide

@@ -6,7 +6,7 @@
 
 - Hermes, Codex CLI, OMX가 이미 설치된 환경에 덧씌운다
 - 기존 런타임을 막지 않는다
-- 최소 규칙만 추가한다
+- 최소 규칙과 launcher만 overlay로 추가한다
 - handoff와 복구를 쉽게 만든다
 
 ## 운영 레이어 (overnight harness)
@@ -35,8 +35,8 @@ node scripts/install.mjs --target /path/to/your-project --with-config --core-onl
 ## 포함 요소
 
 - `AGENTS.md`
-- `.codex/agents/`의 4인방
-- `.agents/skills/`
+- 기존 OMX/Codex `.codex/agents`와 `.agents/skills` 보존
+- starter 예제 agent/skill은 opt-in
 - `.omx/checkpoints/`
 - `.codex/config.toml`
 - `scripts/install.mjs`

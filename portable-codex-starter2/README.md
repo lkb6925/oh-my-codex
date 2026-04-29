@@ -13,8 +13,8 @@
 ## 핵심만
 
 - `AGENTS.md`로 Codex 작업 태도 고정
-- `.codex/agents/`에 핵심 4인방만 유지
-- `.agents/skills/`로 반복 절차 고정
+- 기존 OMX/Codex agent와 skill 표면은 보존한다
+- starter는 `factory`/`factory-night`/handoff 스크립트를 overlay로 덧씌운다
 - `.omx/checkpoints/`로 체크포인트 복구 지점 제공
 - `.omx/hooks/`와 `scripts/harness-event.mjs`로 run/event 기록
 - 설치는 `.omx/checkpoints/`만 옮기고 `.omx/state`, `.omx/logs`, `.omx/runs`는 VM 로컬에 남긴다.
@@ -55,10 +55,10 @@ node scripts/install.mjs --target /path/to/your-project --with-config
 node scripts/doctor.mjs --target /path/to/your-project
 ```
 
-skills를 `.codex/skills/`에 넣고 싶으면:
+starter 예제 skills를 꼭 복사해야 할 때만 명시적으로 켠다:
 
 ```bash
-node scripts/install.mjs --target /path/to/your-project --with-config --skills-root=.codex
+node scripts/install.mjs --target /path/to/your-project --with-config --with-skills --skills-root=.codex
 node scripts/doctor.mjs --target /path/to/your-project --skills-root=.codex
 ```
 
@@ -67,8 +67,8 @@ node scripts/doctor.mjs --target /path/to/your-project --skills-root=.codex
 풀세트 기준:
 
 - `AGENTS.md`
-- `.codex/agents/`
-- `.agents/skills/`
+- 기존 `.codex/agents/` / `.agents/skills/`는 기본적으로 보존
+- starter 예제 agent/skill은 `--with-agents`, `--with-skills`를 명시할 때만 복사
 - `.codex/config.toml`
 - `.codex/config.toml.example`
 - `.codex/mcp-servers.example.toml`
@@ -77,7 +77,7 @@ node scripts/doctor.mjs --target /path/to/your-project --skills-root=.codex
 
 ## 지금 들어 있는 Codex 역할
 
-기본 역할은 딱 4개만 남긴다.
+전역/기존 OMX 역할을 우선 사용한다. 이 starter가 포함한 4개 역할 파일은 opt-in 예제다.
 
 - 계획: `planner`
 - 구조 설계: `architect`
@@ -110,7 +110,7 @@ node scripts/doctor.mjs --target /path/to/your-project --skills-root=.codex
 ## 추천 사용 흐름
 
 1. 새 repo 또는 작업 디렉터리를 준비한다.
-2. 이 starter를 `--core-only`로 설치한다.
+2. 이 starter를 `--core-only` overlay로 설치한다. agent/skill은 기본 보존한다.
 3. `doctor`로 확인한다.
 4. OMX/Hermes가 밤새 이어받기 좋은 커밋 단위로 작업한다.
 5. 작업이 끝나면 반드시 commit/push 한다.
@@ -163,8 +163,8 @@ npm run factory:self-check
 
 ## 현재 기준 검증 포인트
 
-- `.codex/agents` 4개
-- `.agents/skills` 존재
+- 기존 `.codex/agents`를 덮어쓰지 않는 overlay 설치
+- 기존 `.agents/skills`를 덮어쓰지 않는 overlay 설치
 - `.omx/checkpoints` 존재
 - `.codex/config.toml` 존재
 - `.codex/config.toml` 안에 `context7`, `postgres` 존재

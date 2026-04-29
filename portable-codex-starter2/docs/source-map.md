@@ -6,13 +6,10 @@
 
 - `AGENTS.md`
   장기 실행용 Codex 작업 계약으로 유지
-- `.codex/agents/architect.toml`
-- `.codex/agents/planner.toml`
-- `.codex/agents/executor.toml`
-- `.codex/agents/debugger.toml`
-  핵심 4인방만 유지
+- `.codex/agents/*.toml`
+  opt-in starter example agents. 기본 overlay 설치는 기존 OMX/Codex agents를 보존한다.
 - `.agents/skills/*`
-  repo 탐색, 리뷰, DB 점검, 정리용 portable skill 유지
+  opt-in starter example skills. 기본 overlay 설치는 기존 skills를 보존한다.
 - `.codex/config.toml`
   `context7`, `postgres` 기본값 유지
 - `.omx/checkpoints/`
@@ -38,8 +35,8 @@
   pre-push gate 제거
 - `.github/**`
   GitHub/Copilot instruction, hook, workflow, cloud agent 계층 제거
-- `.codex/agents` 나머지 역할
-  OMX와 겹치는 세부 역할 제거
+- 전역 `.codex/agents` 덮어쓰기
+  기존 OMX agent catalog를 우선 사용하도록 기본 설치 경로에서 제거
 - `prompts/**`
   source prompt와 generator 체인은 제거
 - `scripts/generate-agents.mjs`
@@ -51,7 +48,7 @@
 ## 설계 원칙
 
 - 기존 Hermes / Codex CLI / OMX 런타임을 방해하지 않는다.
-- 필요한 행동 강령과 최소 MCP만 덧씌운다.
+- 필요한 행동 강령, launcher, handoff만 덧씌운다.
 - runtime에 꼭 필요한 파일만 남긴다.
 - 복붙 후 바로 쓰기 쉬운 쪽을 우선한다.
 - Hermes는 운영자 인터페이스를 소비하고, 실행은 Codex/OMX가 담당한다.

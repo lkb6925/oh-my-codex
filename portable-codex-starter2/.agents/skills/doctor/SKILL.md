@@ -10,8 +10,8 @@ Use this skill to check whether the current repository has the expected portable
 ## Checks
 
 - `AGENTS.md` exists at repository root
-- `.codex/agents/` exists and contains custom agent TOMLs
-- `.agents/skills/` or `.codex/skills/` exists when skills are expected
+- overlay runtime files exist (`factory`, `factory-night`, scripts, AGENTS)
+- existing OMX/Codex agents and skills are preserved unless opt-in starter copies are requested
 - optional `.codex/config.toml` or `.codex/config.toml.example` exists
 
 ## Output
