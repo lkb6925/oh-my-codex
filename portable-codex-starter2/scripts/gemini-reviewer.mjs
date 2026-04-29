@@ -8,13 +8,13 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const GEMINI_REVIEWER_BACKEND = process.env.GEMINI_REVIEWER_BACKEND || "api";
 const GEMINI_DIFF_MODE = process.env.GEMINI_DIFF_MODE || "cached";
 const GEMINI_TIMEOUT_MS = Number(process.env.GEMINI_TIMEOUT_MS || "45000");
-const GEMINI_MAX_OUTPUT_TOKENS = Number(process.env.GEMINI_MAX_OUTPUT_TOKENS || "2048");
-const MAX_DIFF_CHARS = Number(process.env.GEMINI_MAX_DIFF_CHARS || "60000");
-const MAX_AGENTS_CHARS = Number(process.env.GEMINI_MAX_AGENTS_CHARS || "12000");
-const MAX_TEST_OUTPUT_TAIL_CHARS = Number(process.env.GEMINI_MAX_TEST_OUTPUT_TAIL_CHARS || "10000");
+const GEMINI_MAX_OUTPUT_TOKENS = Number(process.env.GEMINI_MAX_OUTPUT_TOKENS || "4096");
+const MAX_DIFF_CHARS = Number(process.env.GEMINI_MAX_DIFF_CHARS || "45000");
+const MAX_AGENTS_CHARS = Number(process.env.GEMINI_MAX_AGENTS_CHARS || "6000");
+const MAX_TEST_OUTPUT_TAIL_CHARS = Number(process.env.GEMINI_MAX_TEST_OUTPUT_TAIL_CHARS || "6000");
 const GEMINI_TEST_OUTPUT_PATH = process.env.GEMINI_TEST_OUTPUT_PATH || ".tmp-test-output.txt";
 const GEMINI_LOCAL_CHECKS_PATH = process.env.GEMINI_LOCAL_CHECKS_PATH || ".tmp-local-checks-round1.log";
-const MAX_LOCAL_CHECKS_CHARS = Number(process.env.GEMINI_MAX_LOCAL_CHECKS_CHARS || "12000");
+const MAX_LOCAL_CHECKS_CHARS = Number(process.env.GEMINI_MAX_LOCAL_CHECKS_CHARS || "6000");
 
 if (!GEMINI_API_KEY) {
   console.error("GEMINI_API_KEY is not set. Please export it.");
@@ -152,40 +152,12 @@ const localChecks = fs.existsSync(GEMINI_LOCAL_CHECKS_PATH)
 const failedSignalSummary = `[Local Checks Summary]\n${localChecks || "(none)"}\n\n[Test Output]\n${testOutput}`;
 
 const systemPrompt = `
-You are a brutally strict senior software architect with 15 years of experience reviewing production systems.
-Review the provided code changes. Focus only on:
-1. algorithm design and time/space complexity
-2. architectural weaknesses
-3. missing edge cases and exception handling
-4. missing functionality implied by the implementation
-5. maintainability risks
-6. security/data-model guardrails for auth and persistence (password hashing, unique indexes, PK strategy)
-
-Rules:
-- Never praise. Only report things that should be fixed.
-- Be specific and harsh, but technically correct.
-- Keep the "thoughts" field extremely concise (max 3 sentences). Omit boilerplate, greetings, and general explanations. Focus strictly on root cause analysis.
-- Return ONLY valid JSON.
-- If no meaningful issues exist, return {"verdict":"pass","issues":[]}
-- DO NOT provide full replacement code.
-- Provide only minimal fix direction.
-
-JSON format:
-{
-  "thoughts": "concise reasoning behind the verdict",
-  "verdict": "pass" | "fail",
-  "issues": [
-    {
-      "severity": "critical" | "high" | "medium" | "low",
-      "category": "correctness" | "performance" | "architecture" | "edge-case",
-      "file": "path/to/file",
-      "reason": "why this is a problem",
-      "fix": "specific minimal fix direction",
-      "blocking": true | false,
-      "policy_violation": true | false
-    }
-  ]
-}
+You are a strict senior architect reviewing a staged diff.
+Return ONLY compact valid JSON. No markdown. No praise.
+Report at most 5 issues, only actionable defects in correctness, security, performance, architecture, or edge cases.
+Keep every string under 220 chars. Use terse phrases, not paragraphs.
+If clean: {"verdict":"pass","issues":[]}.
+Schema: {"thoughts":"<=160 chars","verdict":"pass|fail","issues":[{"severity":"critical|high|medium|low","category":"correctness|performance|architecture|edge-case","file":"path","reason":"<=220 chars","fix":"<=220 chars","blocking":false,"policy_violation":false}]}.
 `;
 
 const userPrompt = `
