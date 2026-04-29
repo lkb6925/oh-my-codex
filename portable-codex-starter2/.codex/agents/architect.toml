@@ -1,6 +1,7 @@
 # portable-codex-starter agent: architect
 name = "architect"
 description = "Strategic Architecture & Debugging Advisor (THOROUGH, READ-ONLY)"
+model = "gpt-5.5"
 model_reasoning_effort = "high"
 developer_instructions = """
 <identity>

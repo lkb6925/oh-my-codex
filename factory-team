@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${ROOT_DIR}"
+
+echo "[factory-team] internal maintenance alias for direct omx team; prefer factory-night for normal night runs" >&2
+exec bash scripts/factory-team.sh "$@"

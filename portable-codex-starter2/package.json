@@ -2,6 +2,11 @@
   "name": "portable-codex-starter2",
   "private": true,
   "type": "module",
+  "bin": {
+    "factory": "./factory",
+    "factory-night": "./factory-night",
+    "factory-team": "./factory-team"
+  },
   "scripts": {
     "doctor:kit": "node scripts/doctor.mjs",
     "install:kit": "node scripts/install.mjs",
@@ -10,6 +15,7 @@
     "build": "node scripts/doctor.mjs --target .",
     "senior-review": "bash scripts/get-senior-review.sh 1",
     "local-checks": "bash scripts/run-local-checks.sh",
+    "factory": "./factory",
     "factory:night": "bash scripts/factory-night.sh",
     "factory:status": "bash scripts/factory-status.sh",
     "factory:watch": "bash scripts/factory-watch.sh",
@@ -20,6 +26,7 @@
     "factory:team:await": "bash scripts/factory-team-await.sh",
     "factory:team:summary": "bash scripts/factory-team-summary.sh",
     "factory:team:shutdown": "bash scripts/factory-team-shutdown.sh",
-    "factory:self-check": "bash scripts/factory-self-check.sh"
+    "factory:self-check": "bash scripts/factory-self-check.sh",
+    "factory:day": "./factory"
   }
 }

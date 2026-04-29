@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${ROOT_DIR}"
+
+show_help() {
+  bash scripts/factory-day.sh help
+  cat <<'EOF_HELP'
+
+Compatibility subcommands:
+  factory night [task]     Alias for factory-night [task]
+  factory status           Status only
+  factory summary          Handoff summary only
+  factory finish           Finish / shutdown readiness
+  factory watch            Read-only watch loop
+  factory self-check       Validate status contract
+
+Public flow:
+  Day:   factory
+  Night: factory-night "task"
+
+OmX/Codex is the primary conversation/orchestration layer; keep Hermes as optional auxiliary tooling.
+
+factory-team remains available only as an internal maintenance alias; prefer factory-night.
+EOF_HELP
+}
+
+case "${1:-}" in
+  --no-tmux)
+    exec bash scripts/factory-day.sh "$@"
+    ;;
+  ""|day|morning|launch)
+    shift || true
+    exec bash scripts/factory-day.sh "$@"
+    ;;
+  night)
+    shift || true
+    exec ./factory-night "$@"
+    ;;
+  watch)
+    shift || true
+    exec bash scripts/factory-watch.sh "$@"
+    ;;
+  status)
+    shift || true
+    exec bash scripts/factory-status.sh "$@"
+    ;;
+  summary|brief|handoff)
+    shift || true
+    FACTORY_DAY_TMUX=0 exec bash scripts/factory-day.sh "$@"
+    ;;
+  finish)
+    shift || true
+    exec bash scripts/factory-finish.sh "$@"
+    ;;
+  team|team-status|team:status|team-await|team:await|team-summary|team:summary|team-shutdown|team:shutdown)
+    subcommand="$1"
+    shift || true
+    echo "[factory] ${subcommand} is an internal maintenance command; public flow is factory / factory-night." >&2
+    case "${subcommand}" in
+      team) exec ./factory-team "$@" ;;
+      team-status|team:status) exec bash scripts/factory-team-status.sh "$@" ;;
+      team-await|team:await) exec bash scripts/factory-team-await.sh "$@" ;;
+      team-summary|team:summary) exec bash scripts/factory-team-summary.sh "$@" ;;
+      team-shutdown|team:shutdown) exec bash scripts/factory-team-shutdown.sh "$@" ;;
+    esac
+    ;;
+  self-check)
+    shift || true
+    exec bash scripts/factory-self-check.sh "$@"
+    ;;
+  help|-h|--help)
+    show_help
+    ;;
+  *)
+    echo "[factory] unknown subcommand: $1" >&2
+    echo >&2
+    show_help >&2
+    exit 1
+    ;;
+esac

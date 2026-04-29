@@ -11,16 +11,13 @@
 
 ## 운영 레이어 (overnight harness)
 
-- `scripts/factory-night.sh`: 야간 실행 엔트리포인트 (tmux + OMX; 기본은 `omx exec` 기반의 무대화면 없는 작업 모드, `FACTORY_NIGHT_TASK`/`FACTORY_NIGHT_TASK_FILE`/인자 지원, 기본은 agent-only)
-- `scripts/factory-status.sh`: 상태 확인(사람/기계 겸용, `--json` 지원)
+- `factory-night.sh`: 야간 실행 엔트리포인트 (tmux + OMX; 기본은 단일 `omx exec` 직통 작업 모드, `FACTORY_NIGHT_TASK`/`FACTORY_NIGHT_TASK_FILE`/인자 지원, interactive 실행 시 tmux 세션에 attach하고 agent pane을 기본 포커스로 둠). 병렬성이 명확할 때만 `FACTORY_NIGHT_EXEC_MODE=team`을 사용한다.
+- `factory-day.sh`: 낮 실행 엔트리포인트. 최신 `.omx/runs` 야간 산출물을 handoff로 요약하고 OmX/Codex 대화 pane + OMX/log pane으로 된 day tmux launcher를 준비한다. Hermes는 보조 기능/감시 레이어이며 주 오케스트레이터가 아니다.
+- `scripts/factory-status.sh`: 상태 확인(사람/기계 겸용, `--json` 지원, night-to-day boundary 상태 포함)
 - `scripts/factory-watch.sh`: 읽기 전용 감시/알림
 - `scripts/factory-summary.sh`: 아침 점검용 요약 리포트 (`DONE` / `KEEP / PRUNE CANDIDATES` / `NEEDS YOUR DECISION` / `MACHINE / OPERATIONS`)
 - `scripts/factory-finish.sh`: 최종 push/요약/종료 준비 상태 계산
-- `scripts/factory-team.sh`: `omx team` 기반의 병렬 worktree lane 런처(깨끗한 repo일 때 우선 사용)
-- `scripts/factory-team-status.sh`: team 상태 조회
-- `scripts/factory-team-await.sh`: team 완료 대기
-- `scripts/factory-team-summary.sh`: team 요약/상태 브리핑
-- `scripts/factory-team-shutdown.sh`: team 종료/정리
+- `scripts/factory-team*.sh`: 내부 compatibility/maintenance용 team alias와 상태/종료 도구. 공개 흐름은 `factory`와 `factory-night` 중심으로 유지; 실제 병렬 lane은 `omx team`으로 실행
 - `scripts/factory-self-check.sh`: 상태/알림 JSON 계약 확인
 - `scripts/run-local-checks.sh`: local verification 전용 분리 계층
 - `scripts/harness-event.mjs`: watch/summary/finish용 이벤트 기록기
@@ -52,7 +49,7 @@ node scripts/install.mjs --target /path/to/your-project --with-config --core-onl
 - 프레임워크 문서는 `context7`를 먼저 쓴다
 - DB 스키마는 read-only `postgres`로 먼저 확인한다
 - 의미 있는 마일스톤마다 git commit 또는 체크포인트를 남긴다
-- Hermes는 감독자이며, 코드 실행자는 Codex CLI다
+- OmX/Codex가 주 실행자이며, Hermes는 보조 감시/상태/편의 기능이다
 
 ## 하지 않는 일
 
@@ -155,9 +152,9 @@ bash scripts/factory-self-check.sh
   - `--unsafe`, `--danger`, `--destructive`, `--no-sandbox` 패턴은 차단된다.
   - 비-`omx` 명령을 의도적으로 허용하려면 `FACTORY_ALLOW_NON_OMX_COMMAND=1`을 설정한다.
   - 정책을 완화하려면 `FACTORY_COMMAND_POLICY=permissive`를 명시한다.
-- `factory-night.sh`는 기본 backend가 `omx team`이다. `FACTORY_NIGHT_TASK`/`FACTORY_NIGHT_TASK_FILE`/인자를 지원하며, 필요할 때만 `FACTORY_NIGHT_EXEC_MODE=exec`로 직접 exec 경로를 쓴다.
+- `factory-night.sh`는 기본 backend가 단일 `omx exec`이다. `FACTORY_NIGHT_TASK`/`FACTORY_NIGHT_TASK_FILE`/인자를 지원하며, 필요할 때만 `FACTORY_NIGHT_EXEC_MODE=team`으로 병렬 team 경로를 쓴다.
 - `FACTORY_REQUIRE_STRUCTURED_INPUT=1`을 주면 `OMX_COMMAND` 경로를 막고 구조화 입력만 허용한다.
-- `factory-team.sh`는 `omx team`을 실행해 dedicated worktree 기반 병렬 lane을 띄운다.
+- `factory-team.sh`는 compatibility/maintenance alias다. 사용자-facing 시작점은 `factory-night`이며 daytime 시작점은 `factory`다.
   - 기본 `4:executor` 스펙을 사용한다.
   - `FACTORY_TEAM_TASK` 또는 인자로 작업 지시를 넣어야 한다.
 - 런 로그(`run-*.log`), 감시 로그(`watch-*.log`), launch 스크립트(`launch-*.sh`)는 7일 초과 시 정리된다.

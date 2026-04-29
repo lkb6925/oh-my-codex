@@ -26,20 +26,18 @@
 - 하네스는 추가하되 기존 OMX/Hermes/Codex 런타임을 대체하지 않는다.
 - cloud hook/workflow 계층은 넣지 않고 VM 로컬 운영 스크립트에 집중한다.
 - 독립 작업은 병렬 worktree/worker 우선으로 처리하고, 파일이 겹칠 때만 직렬로 묶는다.
-- 작업공간이 깨끗하면 `omx team`을 우선 고려한다. 팀 모드는 dedicated worktree를 자동으로 사용해 병렬 lane 관리에 유리하다.
+- 기본은 단일 OmX/Codex 직통 실행이다. `omx team`은 작업공간이 깨끗하고 독립 lane이 명확할 때만 쓴다.
 - AGENTS/skills/system instructions are the already-loaded operating contract, not user memory; memory is only for user-specific stable preferences and environment facts.
-- 한 줄 사용법: 낮엔 `factory`, 밤엔 `factory-night "할 일"`, 그리고 자면 된다.
-- `factory`는 아침 브리핑 명령이다. 상태 + 요약을 한 번에 보여준다.
-- `factory-night`는 밤 자동 실행 명령이다. 기본은 team lane이다.
-- `factory-team`은 `factory-night`의 team 래퍼다. 밤의 병렬 lane 진입점으로 쓰고, 낮의 대화형 모드와는 분리한다.
-- `factory:team`은 `omx team` 기반의 병렬 worktree lane 런처다. 작업공간이 깨끗할 때 우선 쓴다.
-- `factory:team:shutdown`은 팀 세션을 종료하고 런타임 정리 상태를 남긴다.
+- 한 줄 사용법: 낮엔 `factory`, 밤엔 `factory-night "할 일"`, 기본 대화/실행은 OmX/Codex에 직접 맡긴다.
+- `factory`는 낮(daytime) 런처다. 최신 `factory-night` 산출물을 읽어 handoff를 만들고, tmux에 OmX/Codex 대화 pane + OMX/log pane을 준비한다. Hermes는 필요할 때만 보조 기능으로 켠다.
+- `factory-night`는 밤 자동 실행 명령이다. 기본은 단일 `omx exec` 직통 lane이다. 병렬성이 명확할 때만 `FACTORY_NIGHT_EXEC_MODE=team`을 쓴다.
+- `factory-team`/`factory:team*`은 내부 호환/maintenance alias로만 남긴다. 실제 팀 lane은 `omx team`으로 돈다. 사용자는 보통 `factory`와 `factory-night`만 쓰면 된다.
 ## 역할 분리 (중요)
 
 - **Codex CLI**: 실제 코드 작성/수정 실행자
 - **OMX**: 장기 실행 런타임/워크플로우 계층
 - **Gemini reviewer**: Gemini API key 기반 커밋 전 적대적 리뷰어
-- **Hermes**: 상태/감시 스크립트를 읽는 외부 운영자(필수 아님)
+- **Hermes**: 상태/감시/부가 기능을 제공하는 외부 운영자(필수 아님, 주 두뇌 아님)
 
 ## 가장 빠른 시작
 
@@ -123,19 +121,16 @@ node scripts/doctor.mjs --target /path/to/your-project --skills-root=.codex
 npm run vm:preflight
 npm run factory
 npm run factory:night
-npm run factory:watch
-npm run factory:summary
-npm run factory:finish
 npm run factory:status
+npm run factory:finish
 ```
 
 운영 의미:
-- `factory` = 아침 브리핑(상태 + 요약)
-- `factory:night` = 실행 시작
-- `factory:watch` = 감시/알림
-- `factory:summary` = 현재 상태 요약
+- `factory` = 낮 런처. 최신 야간 산출물 handoff를 만들고 tmux split-pane(day Hermes + OMX/logs)을 준비
+- `factory:night` / `factory-night` = 밤 자동 실행 시작
+- `factory:status` = 즉시 상태 조회(경계 상태 포함)
 - `factory:finish` = 마감/푸시/전원 준비
-- `factory:status` = 즉시 상태 조회
+- `factory:watch`, `factory:summary`, `factory:self-check` = 필요할 때 쓰는 보조/maintenance 명령
 
 기본적으로 `factory:night`는 `FACTORY_COMMAND_POLICY=strict`로 실행되어 `OMX_COMMAND`를 보수적으로 검증한다. bare `omx`는 자동으로 `--tmux --madmax --high`를 붙여 실행하며, 위험 플래그 패턴은 차단된다.
 장기적으로 더 구조화된 입력이 필요하면 `OMX_BIN` + `OMX_ARGS`를 사용할 수 있으며, 이 조합은 `OMX_COMMAND`보다 우선한다.
@@ -156,13 +151,15 @@ WATCH_MAX_CYCLES=10 bash scripts/factory-watch.sh
 `factory-watch`는 `jq`를 우선 사용하고, `jq`가 없으면 `node` 파서로 fallback한다.
 경고가 감지되면 `.omx/runs/latest-alert.json`에 최신 alert 스냅샷이 기록된다.
 
-아침 요약:
+낮 handoff / 마감:
 
 ```bash
-npm run factory:summary
+npm run factory
 npm run factory:finish
 npm run factory:self-check
 ```
+
+`factory`는 `.omx/runs/latest-day-handoff.md`와 `.omx/runs/latest-day-handoff.json`을 새로 쓰고, stale `factory-night-*` tmux session이 남아 있으면 `stale_factory_night_needs_finish` 또는 `active_factory_night_needs_finish`로 표시한다. 이 경우 새 낮 launch처럼 가장하지 말고 먼저 finish/shutdown 여부를 확인한다.
 
 ## 현재 기준 검증 포인트
 

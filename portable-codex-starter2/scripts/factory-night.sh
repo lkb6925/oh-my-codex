@@ -5,6 +5,33 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 ROOT_NAME="$(basename "${ROOT_DIR}")"
 
+if [[ -f "${ROOT_DIR}/scripts/lib/load-env.sh" ]]; then
+  # Load private tool credentials such as GH_TOKEN from ~/.hermes/.env for
+  # non-interactive overnight runs. Values are exported, never printed.
+  # shellcheck source=/dev/null
+  source "${ROOT_DIR}/scripts/lib/load-env.sh"
+  codex_load_env
+fi
+
+if [[ -z "${GH_TOKEN:-}" && -n "${GITHUB_TOKEN:-}" ]]; then
+  export GH_TOKEN="${GITHUB_TOKEN}"
+elif [[ -z "${GITHUB_TOKEN:-}" && -n "${GH_TOKEN:-}" ]]; then
+  export GITHUB_TOKEN="${GH_TOKEN}"
+fi
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "help" || "${1:-}" == "-h" ]]; then
+  cat <<'HELP'
+Usage:
+  factory-night [task]
+
+Night behavior:
+  - default backend: omx exec (single OmX/Codex brain)
+  - explicit team mode: FACTORY_NIGHT_EXEC_MODE=team
+  - task input: positional args, FACTORY_NIGHT_TASK, or FACTORY_NIGHT_TASK_FILE
+HELP
+  exit 0
+fi
+
 SESSION_NAME="${FACTORY_SESSION_NAME:-factory-night-${ROOT_NAME}}"
 RUN_DIR="${FACTORY_RUN_DIR:-.omx/runs}"
 OMX_COMMAND="${OMX_COMMAND:-omx}"
@@ -16,9 +43,14 @@ FACTORY_ALLOW_NON_OMX_COMMAND="${FACTORY_ALLOW_NON_OMX_COMMAND:-0}"
 FACTORY_OMX_DEFAULT_FLAGS="${FACTORY_OMX_DEFAULT_FLAGS:---tmux --madmax --high}"
 FACTORY_OMX_BLOCKLIST_REGEX="${FACTORY_OMX_BLOCKLIST_REGEX:-(^|[[:space:]])(--unsafe|--danger|--destructive|--no-sandbox)([[:space:]]|$)}"
 FACTORY_OMX_AUTO_UPDATE="${FACTORY_OMX_AUTO_UPDATE:-0}"
-# Default is omx team. FACTORY_NIGHT_EXEC_MODE=exec is an explicit
-# alternate omx exec path; override FACTORY_NIGHT_EXEC_COMMAND only when needed.
-FACTORY_NIGHT_EXEC_MODE="${FACTORY_NIGHT_EXEC_MODE:-team}"
+# When launched interactively, attach to the tmux session but keep the UI
+# agent-only by default. Set FACTORY_TMUX_SPLIT_PANE=1 for a recovery shell.
+FACTORY_TMUX_ATTACH="${FACTORY_TMUX_ATTACH:-auto}"
+FACTORY_TMUX_SPLIT_PANE="${FACTORY_TMUX_SPLIT_PANE:-0}"
+FACTORY_TMUX_FOCUS="${FACTORY_TMUX_FOCUS:-agent}"
+# Default is direct omx exec: one strong OmX/Codex brain owns the job.
+# Use FACTORY_NIGHT_EXEC_MODE=team only for truly independent parallel lanes.
+FACTORY_NIGHT_EXEC_MODE="${FACTORY_NIGHT_EXEC_MODE:-exec}"
 FACTORY_NIGHT_TEAM_SPEC="${FACTORY_NIGHT_TEAM_SPEC:-${FACTORY_TEAM_SPEC:-4:executor}}"
 FACTORY_NIGHT_TASK_FILE="${FACTORY_NIGHT_TASK_FILE:-}"
 FACTORY_NIGHT_TASK="${FACTORY_NIGHT_TASK:-}"
@@ -96,12 +128,21 @@ PY
 fi
 
 if [[ "${FACTORY_NIGHT_EXEC_MODE}" == "team" ]]; then
+  if [[ -z "${FACTORY_NIGHT_TEAM_SPEC}" ]]; then
+    echo "[ERROR] factory-night team mode requires FACTORY_NIGHT_TEAM_SPEC (or FACTORY_TEAM_SPEC)." >&2
+    exit 1
+  fi
+  if [[ "${FACTORY_NIGHT_TEAM_SPEC}" =~ [[:space:]] ]]; then
+    echo "[ERROR] FACTORY_NIGHT_TEAM_SPEC must be a single token without whitespace." >&2
+    exit 1
+  fi
   cat > "${NIGHT_TEAM_HELPER_SCRIPT}" <<EOF
 #!/usr/bin/env bash
 set -Eeuo pipefail
-TASK_FILE="\${1:?task file required}"
+TASK_FILE_REL="\${1:?task file required}"
 TEAM_SPEC="\${2:?team spec required}"
 REPO_ROOT="\$(git rev-parse --show-toplevel)"
+TASK_FILE="\$(python3 -c 'import os,sys; print(os.path.abspath(sys.argv[1]))' "\${TASK_FILE_REL}")"
 WORKTREE_ROOT="\${FACTORY_NIGHT_TEAM_WORKTREE_ROOT:-${RUN_DIR}/team-worktrees}"
 mkdir -p "\${WORKTREE_ROOT}"
 WORKTREE_DIR="\$(mktemp -d "\${WORKTREE_ROOT}/leader-XXXXXX")"
@@ -135,7 +176,7 @@ if [[ "${OMX_COMMAND}" =~ [\;\&\|\<\>\`\$\\\(\)\{\}] ]]; then
   exit 1
 fi
 
-declare -a OMX_TOKENS=***
+read -r -a OMX_TOKENS <<< "${OMX_COMMAND}"
 OMX_INPUT_MODE="${OMX_INPUT_MODE:-omx_command}"
 
 if [[ -n "${OMX_ARGS}" ]]; then
@@ -232,6 +273,30 @@ if ! command -v script >/dev/null 2>&1; then
   exit 1
 fi
 
+should_attach=0
+case "${FACTORY_TMUX_ATTACH}" in
+  auto)
+    if [[ -t 1 ]]; then
+      should_attach=1
+    fi
+    ;;
+  1|true|yes)
+    should_attach=1
+    ;;
+esac
+
+should_split=0
+case "${FACTORY_TMUX_SPLIT_PANE}" in
+  auto)
+    if [[ "${should_attach}" == "1" ]]; then
+      should_split=1
+    fi
+    ;;
+  1|true|yes)
+    should_split=1
+    ;;
+esac
+
 OMX_AUTO_UPDATE_RENDERED="$(printf '%q' "${FACTORY_OMX_AUTO_UPDATE}")"
 TTY_COMMAND="env OMX_AUTO_UPDATE=${OMX_AUTO_UPDATE_RENDERED} ${OMX_COMMAND_RENDERED}"
 if [[ "${FACTORY_NIGHT_EXEC_MODE}" == "exec" ]]; then
@@ -306,12 +371,18 @@ chmod +x "${LAUNCH_SCRIPT}"
 
 tmux new-session -d -s "${SESSION_NAME}" "bash '${LAUNCH_SCRIPT}'"
 
-if [[ "${FACTORY_TMUX_SPLIT_PANE:-0}" == "1" ]]; then
+tmux_ui_mode="agent-only"
+if [[ "${should_split}" == "1" ]]; then
   HUMAN_PANE_SCRIPT="cd $(printf '%q' "${ROOT_DIR}") && echo && echo '[factory-night] Human shell pane ready. Type here, not in the OMX pane.' && echo && exec bash --noprofile --norc"
   if tmux split-window -t "${SESSION_NAME}:0" -h -c "${ROOT_DIR}" bash -lc "${HUMAN_PANE_SCRIPT}"; then
+    tmux_ui_mode="split-pane"
     tmux select-pane -t "${SESSION_NAME}:0.0" -T "${FACTORY_AGENT_PANE_TITLE:-omx-agent}" 2>/dev/null || true
     tmux select-pane -t "${SESSION_NAME}:0.1" -T "${FACTORY_HUMAN_PANE_TITLE:-human-shell}" 2>/dev/null || true
-    tmux select-pane -t "${SESSION_NAME}:0.1"
+    if [[ "${FACTORY_TMUX_FOCUS}" == "human" ]]; then
+      tmux select-pane -t "${SESSION_NAME}:0.1"
+    else
+      tmux select-pane -t "${SESSION_NAME}:0.0"
+    fi
   else
     echo "[WARN] failed to create a dedicated human shell pane; continuing with single-pane mode." >&2
   fi
@@ -328,6 +399,7 @@ cat > "${tmp_meta}" <<JSON
   "phase": "launched",
   "finished_at": null,
   "session_name": "${SESSION_NAME}",
+  "tmux_ui_mode": "${tmux_ui_mode}",
   "run_log": "${RUN_LOG}",
   "omx_input_mode": "${OMX_INPUT_MODE}",
   "omx_command_raw": "${OMX_COMMAND}",
@@ -357,3 +429,11 @@ echo "[INFO] factory-night session started: ${SESSION_NAME}"
 echo "[INFO] run log: ${RUN_LOG}"
 echo "[INFO] $(date -u +%Y-%m-%dT%H:%M:%SZ) session started=${SESSION_NAME} run_log=${RUN_LOG}" >> "${EVENT_LOG}"
 node scripts/harness-event.mjs --event factory_started --details "${SESSION_NAME}" >/dev/null 2>&1 || true
+
+if [[ "${should_attach}" == "1" ]]; then
+  if [[ -n "${TMUX:-}" ]]; then
+    tmux switch-client -t "${SESSION_NAME}:0"
+  else
+    tmux attach-session -t "${SESSION_NAME}"
+  fi
+fi

@@ -124,6 +124,9 @@ meta_team_spec=""
 meta_team_name=""
 meta_night_mode=""
 meta_night_team_spec=""
+meta_tmux_ui_mode=""
+boundary_state="ready_for_day"
+boundary_reason="no factory-night tmux session is present"
 team_probe_status=""
 run_state="idle"
 if [[ -f "${META_FILE}" ]]; then
@@ -136,6 +139,7 @@ if [[ -f "${META_FILE}" ]]; then
   meta_team_name="$(json_field_from_file "${META_FILE}" "team_name")"
   meta_night_mode="$(json_field_from_file "${META_FILE}" "night_mode")"
   meta_night_team_spec="$(json_field_from_file "${META_FILE}" "night_team_spec")"
+  meta_tmux_ui_mode="$(json_field_from_file "${META_FILE}" "tmux_ui_mode")"
 fi
 if [[ -z "${meta_agent_alive}" ]]; then
   meta_agent_alive="${session_exists}"
@@ -179,6 +183,20 @@ if [[ "${meta_status}" == "running" && "${meta_agent_alive}" != "true" ]]; then
   run_state="stalled"
 fi
 
+if [[ "${session_exists}" == "true" ]]; then
+  if [[ "${run_state}" == "running" ]]; then
+    boundary_state="active_factory_night_needs_finish"
+    boundary_reason="factory-night tmux session still exists; finish or inspect it before day launch is considered clean"
+  else
+    boundary_state="stale_factory_night_needs_finish"
+    boundary_reason="factory-night tmux session still exists even though latest metadata is not running"
+    run_state="stale_needs_finish"
+  fi
+elif [[ "${meta_status}" == "running" || "${meta_agent_alive}" == "true" ]]; then
+  boundary_state="stale_metadata_needs_finish"
+  boundary_reason="latest metadata still says factory-night is active, but the tmux session is missing"
+fi
+
 remaining_actions=()
 if [[ "${push_state}" == "needs_push" ]]; then
   remaining_actions+=("push_commits")
@@ -199,7 +217,7 @@ if [[ "${last_review_verdict}" == "unknown" ]]; then
 elif [[ "${last_review_verdict}" != "approved" && "${last_review_verdict}" != "pass" ]]; then
   remaining_actions+=("resolve_review_findings")
 fi
-if [[ "${meta_agent_alive}" == "true" ]]; then
+if [[ "${meta_agent_alive}" == "true" || "${session_exists}" == "true" ]]; then
   remaining_actions+=("stop_factory_session")
 fi
 
@@ -218,7 +236,7 @@ if [[ "${JSON_MODE}" == "1" ]]; then
   generated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   node -e '
     const payload = {
-      schema_version: "1.3",
+      schema_version: "1.5",
       generated_at: process.argv[1],
       run_state: process.argv[2],
       session_name: process.argv[3],
@@ -243,16 +261,21 @@ if [[ "${JSON_MODE}" == "1" ]]; then
       team_spec: process.argv[22],
       team_name: process.argv[23],
       night_mode: process.argv[24],
-      night_team_spec: process.argv[25]
+      night_team_spec: process.argv[25],
+      tmux_ui_mode: process.argv[26],
+      boundary_state: process.argv[27],
+      boundary_reason: process.argv[28]
     };
     process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-  ' "${generated_at}" "${run_state}" "${SESSION_NAME}" "${session_exists}" "${branch}" "${dirty}" "${latest_commit}" "${latest_log}" "${log_age_seconds}" "${META_FILE}" "${meta_age_seconds}" "${omx_status}" "${push_state}" "${last_review_verdict}" "${last_alert_file}" "${last_alert_severity}" "${last_alert_code}" "${poweroff_ready}" "${REQUIRE_REVIEW_FOR_POWEROFF}" "${remaining_actions_json}" "${meta_execution_mode}" "${meta_team_spec}" "${meta_team_name}" "${meta_night_mode}" "${meta_night_team_spec}"
+  ' "${generated_at}" "${run_state}" "${SESSION_NAME}" "${session_exists}" "${branch}" "${dirty}" "${latest_commit}" "${latest_log}" "${log_age_seconds}" "${META_FILE}" "${meta_age_seconds}" "${omx_status}" "${push_state}" "${last_review_verdict}" "${last_alert_file}" "${last_alert_severity}" "${last_alert_code}" "${poweroff_ready}" "${REQUIRE_REVIEW_FOR_POWEROFF}" "${remaining_actions_json}" "${meta_execution_mode}" "${meta_team_spec}" "${meta_team_name}" "${meta_night_mode}" "${meta_night_team_spec}" "${meta_tmux_ui_mode}" "${boundary_state}" "${boundary_reason}"
   exit 0
 fi
 
 echo "factory-status"
 echo "  session: ${SESSION_NAME} (${session_exists})"
 echo "  run_state: ${run_state}"
+echo "  boundary_state: ${boundary_state}"
+echo "  boundary_reason: ${boundary_reason}"
 echo "  branch: ${branch}"
 echo "  working_tree: ${dirty}"
 echo "  latest_commit: ${latest_commit}"
@@ -262,6 +285,7 @@ echo "  meta_age_seconds: ${meta_age_seconds:-n/a}"
 echo "  last_update_at: ${meta_last_update_at:-n/a}"
 echo "  last_event: ${meta_last_event:-n/a}"
 echo "  execution_mode: ${meta_execution_mode:-n/a}"
+echo "  tmux_ui_mode: ${meta_tmux_ui_mode:-n/a}"
 echo "  night_mode: ${meta_night_mode:-n/a}"
 echo "  night_team_spec: ${meta_night_team_spec:-n/a}"
 echo "  team_spec: ${meta_team_spec:-n/a}"

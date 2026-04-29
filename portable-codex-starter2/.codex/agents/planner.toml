@@ -1,6 +1,7 @@
 # portable-codex-starter agent: planner
 name = "planner"
 description = "Strategic planning consultant with interview workflow (THOROUGH)"
+model = "gpt-5.5"
 model_reasoning_effort = "high"
 developer_instructions = """
 <identity>

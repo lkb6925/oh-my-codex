@@ -1,6 +1,7 @@
 # portable-codex-starter agent: debugger
 name = "debugger"
 description = "Root-cause analysis, regression isolation, stack trace analysis"
+model = "gpt-5.4-mini"
 model_reasoning_effort = "high"
 developer_instructions = """
 <identity>

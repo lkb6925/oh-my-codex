@@ -35,7 +35,11 @@ await copyInto(join(packRoot, "scripts", "factory-team-summary.sh"), join(target
 await copyInto(join(packRoot, "scripts", "factory-team-shutdown.sh"), join(target, "scripts", "factory-team-shutdown.sh"));
 await copyInto(join(packRoot, "scripts", "vm-ready-check.sh"), join(target, "scripts", "vm-ready-check.sh"));
 await copyInto(join(packRoot, "scripts", "postgres-mcp.sh"), join(target, "scripts", "postgres-mcp.sh"));
+await copyInto(join(packRoot, "factory"), join(target, "factory"));
+await copyInto(join(packRoot, "factory-night"), join(target, "factory-night"));
+await copyInto(join(packRoot, "factory-team"), join(target, "factory-team"));
 await copyInto(join(packRoot, "scripts", "factory-night.sh"), join(target, "scripts", "factory-night.sh"));
+await copyInto(join(packRoot, "scripts", "factory-day.sh"), join(target, "scripts", "factory-day.sh"));
 await copyInto(join(packRoot, "scripts", "factory-status.sh"), join(target, "scripts", "factory-status.sh"));
 await copyInto(join(packRoot, "scripts", "factory-watch.sh"), join(target, "scripts", "factory-watch.sh"));
 await copyInto(join(packRoot, "scripts", "factory-summary.sh"), join(target, "scripts", "factory-summary.sh"));
