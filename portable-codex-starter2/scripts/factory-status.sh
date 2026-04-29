@@ -37,11 +37,16 @@ json_field_from_file() {
   ' "${file_path}" "${field_name}"
 }
 
-branch="$(git branch --show-current 2>/dev/null || echo unknown)"
-latest_commit="$(git log --oneline -n 1 2>/dev/null | head -n 1)"
-dirty="clean"
-if [[ -n "$(git status --short 2>/dev/null)" ]]; then
-  dirty="dirty"
+branch="unknown"
+latest_commit="none"
+dirty="not_git"
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  branch="$(git branch --show-current 2>/dev/null || echo unknown)"
+  latest_commit="$(git log --oneline -n 1 2>/dev/null | head -n 1 || true)"
+  dirty="clean"
+  if [[ -n "$(git status --short 2>/dev/null || true)" ]]; then
+    dirty="dirty"
+  fi
 fi
 
 session_exists="false"
